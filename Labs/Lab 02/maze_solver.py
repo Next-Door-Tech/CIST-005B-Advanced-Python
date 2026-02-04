@@ -8,11 +8,11 @@ def maze_solver_helper(maze: list[list[int]], x: int, y: int, path: list[tuple])
         path.append((x, y))
         return True
 
-    elif x > 0 and maze_solver_helper(maze, x-1, y, path):  # down
+    elif x > 0 and maze_solver_helper(maze, x-1, y, path):  # up
         path.append((x, y))
         return True
 
-    elif x <= len(maze) and maze_solver_helper(maze, x+1, y, path):  # up
+    elif x <= len(maze) and maze_solver_helper(maze, x+1, y, path):  # down
         path.append((x, y))
         return True
 
@@ -41,7 +41,7 @@ def maze_solver(maze: list[list[int]]) -> bool:
         return False
 
 
-test_maze = [
+test_maze_1 = [
     [0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
     [1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
     [1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
@@ -54,4 +54,19 @@ test_maze = [
     [1, 1, 0, 1, 0, 1, 1, 1, 1, 0],
 ]
 
-maze_solver(test_maze)
+maze_solver(test_maze_1)
+
+test_maze_2 = [
+    [0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0],
+    [1, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+    [1, 1, 1, 0, 1, 1, 1, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # go left here
+    [0, 1, 1, 1, 1, 0, 1, 1, 1, 0],
+    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0], # dead end moving down
+    [0, 1, 0, 1, 1, 1, 1, 0, 1, 1],
+    [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    [1, 1, 0, 1, 0, 1, 1, 1, 1, 0],
+]
+
+maze_solver(test_maze_2)
