@@ -5,7 +5,24 @@ Due Feb 10 by 11:59pm | Points 10 | Submitting a file upload | Available until F
 This lab will be dedicated to finishing the Maze Solver recursive program discussed in the Lecture 2 slides.
 
 Objective:
-In this lab, you will implement a recursive algorithm to solve a maze. The maze is represented as a 2D array where 1 represents walls and 0 represents valid paths. The goal is to find a path from the starting point to the exit, if one exists, using recursion.
+In this lab, you will implement a recursive algorithm to solve a maze. The maze is represented as a 2D array where 1 represents walls and 0 represents valid paths. The goal is to find a path from the starting point (index [0][0]) to the exit (index [n][n]), if one exists, using recursion.
+
+Here's one such example maze for you to use:
+
+```
+maze = [
+    [0,0,1,0,0,0,1,0,0,0],
+    [1,0,1,0,1,0,1,0,1,0],
+    [1,0,0,0,1,0,0,0,1,0],
+    [1,1,1,0,1,1,1,0,1,0],
+    [0,0,0,0,0,0,1,0,0,0],
+    [0,1,1,1,1,0,1,1,1,0],
+    [0,1,0,0,0,0,0,0,1,0],
+    [0,1,0,1,1,1,1,0,1,0],
+    [0,0,0,1,0,0,0,0,0,0],
+    [1,1,0,1,0,1,1,1,1,0],
+]
+```
 
 Rubric:
 
