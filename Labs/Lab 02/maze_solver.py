@@ -8,19 +8,19 @@ def maze_solver_helper(maze: list[list[int]], x: int, y: int, path: list[tuple])
         path.append((x, y))
         return True
 
-    elif x > 0 and maze_solver_helper(maze, x-1, y, path):  # up
-        path.append((x, y))
-        return True
-
     elif x <= len(maze) and maze_solver_helper(maze, x+1, y, path):  # down
         path.append((x, y))
         return True
 
-    elif y > 0 and maze_solver_helper(maze, x, y-1, path):  # left
+    elif y <= len(maze[0]) and maze_solver_helper(maze, x, y+1, path):  # right
         path.append((x, y))
         return True
 
-    elif y <= len(maze[0]) and maze_solver_helper(maze, x, y+1, path):  # right
+    elif x > 0 and maze_solver_helper(maze, x-1, y, path):  # up
+        path.append((x, y))
+        return True
+
+    elif y > 0 and maze_solver_helper(maze, x, y-1, path):  # left
         path.append((x, y))
         return True
 
