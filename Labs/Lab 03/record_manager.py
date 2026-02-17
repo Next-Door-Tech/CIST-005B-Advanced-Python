@@ -186,8 +186,21 @@ def get_option() -> int:
         return -1
 
 
-def load_file(db: SalesDB) -> SalesDB:
-    pass
+def load_file(db: SalesDB):
+    path = input("Enter file path: ")
+
+    with open(path, "r") as fd:
+        f = csv.DictReader(fd)
+
+        for rec in f:
+            sale_id = int(rec["sale_id"])
+            sale_date = date.fromisoformat(rec["sale_date"])
+            amount = USD(rec["amount"])
+            product = rec["product"]
+
+            db.insert(SaleRecord(sale_id, sale_date, amount, product))
+
+    print(f"\t{len(db)} records loaded.")
 
 
 def print_latest_sale(db: SalesDB):
