@@ -155,24 +155,23 @@ def get_option() -> int:
         return -1
 
 
-def load_file():
-    nonlocal database
+def load_file(db: SalesDB) -> SalesDB:
     pass
 
 
-def get_latest():
+def print_latest_sale(db: SalesDB):
     pass
 
 
-def total_revenue():
+def print_total_revenue(db: SalesDB):
     pass
 
 
-def check_duplicates():
+def check_duplicates(db: SalesDB):
     pass
 
 
-def get_by_id():
+def search_by_id(db: SalesDB):
     pass
 
 
@@ -191,19 +190,19 @@ def main() -> None:
                 print_menu()
 
             case 1:  # Load file to database
-                load_file()
+                load_file(database)
 
             case 2:  # Load latest sale
-                get_latest()
+                print_latest_sale(database)
 
             case 3:  # Compute total revenue
-                total_revenue()
+                print_total_revenue(database)
 
             case 4:  # Check for duplicate IDs
-                check_duplicates()
+                check_duplicates(database)
 
             case 5:  # Search by ID
-                get_by_id()
+                search_by_id(database)
 
 
 main()
