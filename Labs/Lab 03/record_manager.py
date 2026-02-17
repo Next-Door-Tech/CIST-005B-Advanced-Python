@@ -3,7 +3,6 @@ from time import *
 from typing import NamedTuple
 from datetime import date
 import decimal
-from decimal import Decimal
 
 decimal.setcontext(decimal.Context(rounding=decimal.ROUND_HALF_UP))
 
