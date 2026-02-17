@@ -290,6 +290,9 @@ def main() -> None:
 
                 print(f"Elapsed time: {end - start} ns.")
 
+            case -2:
+                print_debug()
+
             case 6:  # Clear loaded data
                 print("Clearing loaded sales data.")
                 database.clear()
