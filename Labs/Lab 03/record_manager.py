@@ -9,24 +9,91 @@ decimal.setcontext(decimal.Context(rounding=decimal.ROUND_HALF_UP))
 headers = ("sale_id", "sale_date", "amount", "product")
 
 
-class SaleDB:
+class SaleRecord(NamedTuple):
+    """Sales record."""
+
+    sale_id: int
+    sale_date: date
+    amount: Decimal
+    product: str
+
+
+class SalesDB:
     """Database of sales records."""
 
-    class Record(NamedTuple):
-        """Sales record."""
+    _records: list[SaleRecord]  # list of sales records
 
-        sale_id: int
-        sale_date: date
-        amount: Decimal
-        product: str
+    _ids_initialized: bool
+    _ids: dict[int, list[SaleRecord]]  # cache mapping sales ids to hashes for fast search
 
-    _records: dict[int, Record]  # hashmap of sales records
-    _ids: dict[int, list[int]]  # maps sales ids to hashes for fast search
-    _dates: dict[date, list[int]]  # maps dates to hashes for fast search
+    _dates_initialized: bool
+    _dates: dict[date, list[SaleRecord]]  # cache mapping dates to hashes for fast search
+
+    def __init__(self):
+        self._records: list[SaleRecord] = list()  # list of sales records
+
+        self._ids_initialized: bool = False
+        self._ids: dict[int, list[SaleRecord]] = dict()  # sorted cache mapping sales ids to hashes for fast search
+
+        self._dates_initialized: bool = False
+        self._dates: dict[date, list[SaleRecord]] = dict()  # cache mapping dates to hashes for fast search
+
+    def clear(self):
+        del self._records, self._ids, self._dates
+        self.__init__()
+
+    def insert(self, new_record: SaleRecord):
+        self._records.append(new_record)
+        self._ids_initialized = False
+        self._dates_initialized = False
+
+    def get_by_id(self, search_id: int) -> tuple[SaleRecord, ...]:
+        if not self._ids_initialized:
+            self._construct_id_cache()
+
+        return tuple(self._ids[search_id])
+
+    def get_by_date(self, search_date: date) -> tuple[SaleRecord, ...]:
+        if not self._dates_initialized:
+            self._construct_date_cache()
+
+        return tuple(self._dates[search_date])
+
+    def get_latest(self) -> tuple[SaleRecord, ...]:
+        if not self._dates_initialized:
+            self._construct_date_cache()
+
+        return tuple(next(reversed(self._dates.values())))  # return first item of reverse iterator over dates
+
+    def _construct_id_cache(self):
+        self.clear_id_cache()
+
+        # sorted(key) needs to be a function so key=SaleRecord.sale_id does not work
+        for rec in sorted(self._records, key=(lambda r: r.sale_id)):
+            self._ids.setdefault(rec.sale_id, []).append(rec)
+
+        self._ids_initialized = True
+
+    def clear_id_cache(self):
+        self._ids_initialized = False
+        self._ids.clear()
+
+    def _construct_date_cache(self):
+        self.clear_date_cache()
+
+        # sorted(key) needs to be a function so key=SaleRecord.sale_id does not work
+        for rec in sorted(self._records, key=(lambda r: r.sale_date)):
+            self._dates.setdefault(rec.sale_date, []).append(rec)
+
+        self._dates_initialized = True
+
+    def clear_date_cache(self):
+        self._dates_initialized = False
+        self._dates.clear()
 
 
 def main() -> None:
-    database = SaleDB()
+    database = SalesDB()
 
     def print_menu():
         print(
