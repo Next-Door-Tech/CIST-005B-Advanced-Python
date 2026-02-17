@@ -186,9 +186,10 @@ def get_option() -> int:
         return -1
 
 
-def load_file(db: SalesDB):
+def load_file(db: SalesDB) -> int:
     path = input("Enter file path: ")
 
+    start = perf_counter_ns()
     with open(path, "r") as fd:
         f = csv.DictReader(fd)
 
@@ -199,29 +200,48 @@ def load_file(db: SalesDB):
             product = rec["product"]
 
             db.insert(SaleRecord(sale_id, sale_date, amount, product))
+    end = perf_counter_ns()
 
     print(f"\t{len(db)} records loaded.")
+    return end - start
 
 
-def print_latest_sale(db: SalesDB):
+def print_latest_sale(db: SalesDB) -> int:
+    start = perf_counter_ns()
     if len(db) == 0:
         print("Error: no sales records loaded.")
-        return
+        return perf_counter_ns() - start
 
-    print("Most recent sale(s) records:")
-    for rec in db.get_latest():
+    print("Most recent sales record(s):")
+
+    start = perf_counter_ns()
+    latest = db.get_latest()
+    end = perf_counter_ns()
+
+    for rec in latest:
         print('\t', rec)
 
     print()
 
+    return end - start
 
-def print_total_revenue(db: SalesDB):
-    print(f"Total revenue: {db.total_revenue()}")
+
+def print_total_revenue(db: SalesDB) -> int:
+    start = perf_counter_ns()
+    rev = db.total_revenue()
+    end = perf_counter_ns()
+
+    print(f"Total revenue: {rev}")
     print()
 
+    return end - start
 
-def check_duplicates(db: SalesDB):
+
+def check_duplicates(db: SalesDB) -> int:
+    start = perf_counter_ns()
     duplicates = db.get_duplicates()
+    end = perf_counter_ns()
+
     print(f"{len(duplicates)} records with duplicate ids found:")
 
     for rec in duplicates:
@@ -229,15 +249,19 @@ def check_duplicates(db: SalesDB):
 
     print()
 
+    return end - start
 
-def search_by_id(db: SalesDB):
+
+def search_by_id(db: SalesDB) -> int:
     try:
         search_id = int(input("ID to search for: "))
     except ValueError:
         print("\tError: invalid input.")
-        return
+        return -1
 
+    start = perf_counter_ns()
     results = db.get_by_id(search_id)
+    end = perf_counter_ns()
 
     if len(results) == 0:
         print("No records found.")
@@ -252,6 +276,7 @@ def search_by_id(db: SalesDB):
             print('\t', rec)
 
     print()
+    return end - start
 
 
 def main() -> None:
@@ -269,39 +294,19 @@ def main() -> None:
                 print_menu()
 
             case 1:  # Load file to database
-                start = perf_counter_ns()
-                load_file(database)
-                end = perf_counter_ns()
-
-                print(f"Elapsed time: {end - start} ns.")
+                print(f"Elapsed time: {load_file(database)} ns.")
 
             case 2:  # Load latest sale
-                start = perf_counter_ns()
-                print_latest_sale(database)
-                end = perf_counter_ns()
-
-                print(f"Elapsed time: {end - start} ns.")
+                print(f"Elapsed time: {print_latest_sale(database)} ns.")
 
             case 3:  # Compute total revenue
-                start = perf_counter_ns()
-                print_total_revenue(database)
-                end = perf_counter_ns()
-
-                print(f"Elapsed time: {end - start} ns.")
+                print(f"Elapsed time: {print_total_revenue(database)} ns.")
 
             case 4:  # Check for duplicate IDs
-                start = perf_counter_ns()
-                check_duplicates(database)
-                end = perf_counter_ns()
-
-                print(f"Elapsed time: {end - start} ns.")
+                print(f"Elapsed time: {check_duplicates(database)} ns.")
 
             case 5:  # Search by ID
-                start = perf_counter_ns()
-                search_by_id(database)
-                end = perf_counter_ns()
-
-                print(f"Elapsed time: {end - start} ns.")
+                print(f"Elapsed time: {search_by_id(database)} ns.")
 
             case -2:
                 print_debug()
