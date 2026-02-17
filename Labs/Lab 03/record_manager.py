@@ -92,63 +92,70 @@ class SalesDB:
         self._dates.clear()
 
 
+def print_menu():
+    print(
+        """
+        Select an option:
+            1: Load in sales data from CSV
+            2: Retrieve the latest sale
+            3: Compute the total revenue
+            4: Check for duplicate sale IDs
+            5: Search for a sale by its ID
+
+            0: Reprint this menu
+            -1: Exit
+        """
+    )
+
+
+def get_option() -> int:
+    for i in range(3):
+        response = input("Option: ")
+        match response.lower():
+            case '1' | "load":
+                return 1
+            case '2' | "retrieve" | "latest":
+                return 2
+            case '3' | "compute" | "total" | "revenue":
+                return 3
+            case '4' | "check" | "duplicate":
+                return 4
+            case '5' | "search" | "id":
+                return 5
+            case '0' | 'h' | '?' | "help":
+                return 0
+            case '-1' | 'q' | "quit" | "exit":
+                return -1
+            case _:
+                print(f'\tError: Unknown option: "{response}"')
+    else:
+        print("Too many invalid options passed.")
+        return -1
+
+
+def load_file():
+    nonlocal database
+    pass
+
+
+def get_latest():
+    pass
+
+
+def total_revenue():
+    pass
+
+
+def check_duplicates():
+    pass
+
+
+def get_by_id():
+    pass
+
+
 def main() -> None:
     database = SalesDB()
-
-    def print_menu():
-        print(
-            """
-            Select an option:
-                1: Load in sales data from CSV
-                2: Retrieve the latest sale
-                3: Compute the total revenue
-                4: Check for duplicate sale IDs
-                5: Search for a sale by its ID
-
-                0: Reprint this menu
-                -1: Exit
-            """
-        )
-
-    def get_option() -> int:
-        for i in range(3):
-            response = input("Option: ")
-            match response.lower():
-                case '1' | "load":
-                    return 1
-                case '2' | "retrieve" | "latest":
-                    return 2
-                case '3' | "compute" | "total" | "revenue":
-                    return 3
-                case '4' | "check" | "duplicate":
-                    return 4
-                case '5' | "search" | "id":
-                    return 5
-                case '0' | 'h' | '?' | "help":
-                    return 0
-                case '-1' | 'q' | "quit" | "exit":
-                    return -1
-                case _:
-                    print(f'\tError: Unknown option: "{response}"')
-        else:
-            print("Too many invalid options passed.")
-            return -1
-
-    def load_file():
-        nonlocal database
-        pass
-
-    def get_latest():
-        pass
-
-    def total_revenue():
-        pass
-
-    def check_duplicates():
-        pass
-
-    def get_by_id():
-        pass
 
     print_menu()
 
