@@ -87,6 +87,18 @@ class SalesDB:
 
         return total
 
+    def get_duplicates(self) -> tuple[SaleRecord, ...]:
+        if not self._ids_initialized:
+            self._construct_id_cache()
+
+        result = list()
+
+        for rec in self._ids.values():
+            if len(rec) > 1:
+                result.extend(rec)
+
+        return tuple(result)
+
     def _construct_id_cache(self):
         self.clear_id_cache()
 
@@ -126,6 +138,19 @@ def print_menu():
 
             0: Reprint this menu
             -1: Exit
+            -2: Print debug options
+        """
+    )
+
+
+def print_debug():
+    print_menu()
+
+    print(
+        """
+            [Debug]
+            6: Clear loaded data
+            7: Reset caches
         """
     )
 
@@ -144,10 +169,16 @@ def get_option() -> int:
                 return 4
             case '5' | "search" | "id":
                 return 5
+            case '6' | "clear":
+                return 6
+            case '7' | "cache":
+                return 7
             case '0' | 'h' | '?' | "help":
                 return 0
             case '-1' | 'q' | "quit" | "exit":
                 return -1
+            case '-2' | "debug":
+                return -2
             case _:
                 print(f'\tError: Unknown option: "{response}"')
     else:
@@ -160,19 +191,54 @@ def load_file(db: SalesDB) -> SalesDB:
 
 
 def print_latest_sale(db: SalesDB):
-    pass
+    if len(db) == 0:
+        print("Error: no sales records loaded.")
+        return
+
+    print("Most recent sale(s) records:")
+    for rec in db.get_latest():
+        print('\t', rec)
+
+    print()
 
 
 def print_total_revenue(db: SalesDB):
-    pass
+    print(f"Total revenue: {db.total_revenue()}")
+    print()
 
 
 def check_duplicates(db: SalesDB):
-    pass
+    duplicates = db.get_duplicates()
+    print(f"{len(duplicates)} records with duplicate ids found:")
+
+    for rec in duplicates:
+        print('\t', rec)
+
+    print()
 
 
 def search_by_id(db: SalesDB):
-    pass
+    try:
+        search_id = int(input("ID to search for: "))
+    except ValueError:
+        print("\tError: invalid input.")
+        return
+
+    results = db.get_by_id(search_id)
+
+    if len(results) == 0:
+        print("No records found.")
+
+    elif len(results) == 1:
+        print("One record found:")
+        print('\t', results[0])
+
+    else:
+        print(f"Warning: multiple records found ({len(results)}):")
+        for rec in results:
+            print('\t', rec)
+
+    print()
 
 
 def main() -> None:
@@ -203,6 +269,15 @@ def main() -> None:
 
             case 5:  # Search by ID
                 search_by_id(database)
+
+            case 6:  # Clear loaded data
+                print("Clearing loaded sales data.")
+                database.clear()
+
+            case 7:
+                print("Clearing loaded sales data caches.")
+                database.clear_id_cache()
+                database.clear_date_cache()
 
 
 main()
