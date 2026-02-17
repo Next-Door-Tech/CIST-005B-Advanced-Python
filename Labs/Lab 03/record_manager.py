@@ -6,6 +6,14 @@ from decimal import Decimal
 
 decimal.setcontext(decimal.Context(rounding=decimal.ROUND_HALF_UP))
 
+
+class USD(decimal.Decimal):
+    """United States Dollars represented as decimal.Decimal"""
+
+    def __str__(self):
+        return "$" + super().quantize(decimal.Decimal('0.01')).__str__()
+
+
 headers = ("sale_id", "sale_date", "amount", "product")
 
 
@@ -14,7 +22,7 @@ class SaleRecord(NamedTuple):
 
     sale_id: int
     sale_date: date
-    amount: Decimal
+    amount: USD
     product: str
 
 
@@ -70,6 +78,14 @@ class SalesDB:
             self._construct_date_cache()
 
         return tuple(next(reversed(self._dates.values())))  # return first item of reverse iterator over dates
+
+    def total_revenue(self) -> USD:
+        total = USD('0.00')
+
+        for rec in self._records:
+            total += rec.amount
+
+        return total
 
     def _construct_id_cache(self):
         self.clear_id_cache()
