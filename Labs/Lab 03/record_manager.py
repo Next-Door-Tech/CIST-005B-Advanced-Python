@@ -1,5 +1,5 @@
 import csv
-from typing import NamedTuple, TypeAlias
+from typing import NamedTuple
 from datetime import date
 import decimal
 from decimal import Decimal
