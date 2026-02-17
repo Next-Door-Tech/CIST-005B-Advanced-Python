@@ -38,6 +38,9 @@ class SalesDB:
         self._dates_initialized: bool = False
         self._dates: dict[date, list[SaleRecord]] = dict()  # cache mapping dates to hashes for fast search
 
+    def __len__(self):
+        return self._records.__len__()
+
     def clear(self):
         del self._records, self._ids, self._dates
         self.__init__()
@@ -60,6 +63,9 @@ class SalesDB:
         return tuple(self._dates[search_date])
 
     def get_latest(self) -> tuple[SaleRecord, ...]:
+        if self.__len__() == 0:
+            return tuple()
+
         if not self._dates_initialized:
             self._construct_date_cache()
 
