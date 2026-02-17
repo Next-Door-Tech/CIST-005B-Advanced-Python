@@ -1,4 +1,5 @@
 import csv
+from time import *
 from typing import NamedTuple
 from datetime import date
 import decimal
@@ -256,19 +257,39 @@ def main() -> None:
                 print_menu()
 
             case 1:  # Load file to database
+                start = perf_counter_ns()
                 load_file(database)
+                end = perf_counter_ns()
+
+                print(f"Elapsed time: {end - start} ns.")
 
             case 2:  # Load latest sale
+                start = perf_counter_ns()
                 print_latest_sale(database)
+                end = perf_counter_ns()
+
+                print(f"Elapsed time: {end - start} ns.")
 
             case 3:  # Compute total revenue
+                start = perf_counter_ns()
                 print_total_revenue(database)
+                end = perf_counter_ns()
+
+                print(f"Elapsed time: {end - start} ns.")
 
             case 4:  # Check for duplicate IDs
+                start = perf_counter_ns()
                 check_duplicates(database)
+                end = perf_counter_ns()
+
+                print(f"Elapsed time: {end - start} ns.")
 
             case 5:  # Search by ID
+                start = perf_counter_ns()
                 search_by_id(database)
+                end = perf_counter_ns()
+
+                print(f"Elapsed time: {end - start} ns.")
 
             case 6:  # Clear loaded data
                 print("Clearing loaded sales data.")
