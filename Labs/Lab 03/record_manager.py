@@ -189,21 +189,25 @@ def get_option() -> int:
 def load_file(db: SalesDB) -> int:
     path = input("Enter file path: ")
 
-    start = perf_counter_ns()
-    with open(path, "r") as fd:
-        f = csv.DictReader(fd)
+    try:
+        start = perf_counter_ns()
+        with open(path, "r") as fd:
+            f = csv.DictReader(fd)
 
-        for rec in f:
-            sale_id = int(rec["sale_id"])
-            sale_date = date.fromisoformat(rec["sale_date"])
-            amount = USD(rec["amount"])
-            product = rec["product"]
+            for rec in f:
+                sale_id = int(rec["sale_id"])
+                sale_date = date.fromisoformat(rec["sale_date"])
+                amount = USD(rec["amount"])
+                product = rec["product"]
 
-            db.insert(SaleRecord(sale_id, sale_date, amount, product))
-    end = perf_counter_ns()
+                db.insert(SaleRecord(sale_id, sale_date, amount, product))
+        end = perf_counter_ns()
 
-    print(f"\t{len(db)} records loaded.")
-    return end - start
+        print(f"\t{len(db)} records loaded.")
+        return end - start
+    except FileNotFoundError as E:
+        print(E)
+        return -1
 
 
 def print_latest_sale(db: SalesDB) -> int:
