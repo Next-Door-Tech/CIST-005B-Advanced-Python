@@ -62,13 +62,13 @@ class SalesDB:
         if not self._ids_initialized:
             self._construct_id_cache()
 
-        return tuple(self._ids[search_id])
+        return tuple(self._ids.get(search_id, []))
 
     def get_by_date(self, search_date: date) -> tuple[SaleRecord, ...]:
         if not self._dates_initialized:
             self._construct_date_cache()
 
-        return tuple(self._dates[search_date])
+        return tuple(self._dates.get(search_date, []))
 
     def get_latest(self) -> tuple[SaleRecord, ...]:
         if self.__len__() == 0:
