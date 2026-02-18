@@ -6,15 +6,14 @@ import decimal
 
 decimal.setcontext(decimal.Context(rounding=decimal.ROUND_HALF_UP))
 
+headers = ("sale_id", "sale_date", "amount", "product")
+
 
 class USD(decimal.Decimal):
     """United States Dollars represented as decimal.Decimal"""
 
     def __str__(self):
         return "$" + super().quantize(decimal.Decimal('0.01')).__str__()
-
-
-headers = ("sale_id", "sale_date", "amount", "product")
 
 
 class SaleRecord(NamedTuple):
@@ -325,4 +324,4 @@ def main() -> None:
                 database.clear_date_cache()
 
 
-main()
+# main()

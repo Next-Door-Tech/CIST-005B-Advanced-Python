@@ -1,6 +1,8 @@
+import typing
 import csv
 from random import *
 from datetime import date
+from record_manager import headers
 
 
 def rand_date(start: date = date(2000, 1, 1), end: date = date.today()) -> date:
@@ -9,24 +11,23 @@ def rand_date(start: date = date(2000, 1, 1), end: date = date.today()) -> date:
     return date.fromordinal(randint(dmin, dmax))
 
 
-def csv_gen(n: int) -> None:
-    headers = ("sale_id", "sale_date", "amount", "product")
+def csv_gen(n: int, filename: str = None) -> None:
+    if filename is None:
+        filename = f"testdata_{n}.csv"
+
+    with open(filename, "xw") as fd:
+        csv_write_records(n, fd)
+
+
+def csv_write_records(n: int, fd: typing.IO):
     products = ("widget", "thingy", "doohickey", "whirligig", "thingamabob", "whatsit", "springamathing", "doodad",
                 "gizmo", "thingamajig", "gadget")
 
-    with open(f"testdata_{n}.csv", "w") as fd:
-        f = csv.writer(fd)
+    f = csv.writer(fd)
 
-        f.writerow(headers)
+    f.writerow(headers)
 
-        seed(0)
+    seed(0)
 
-        for i in range(n):
-            f.writerow([i, rand_date(), f'{random() * 200:.2f}', products[randrange(len(products))]])
-
-
-csv_gen(10)
-csv_gen(100)
-csv_gen(1000)
-csv_gen(10000)
-csv_gen(100000)
+    for i in range(n):
+        f.writerow([i, rand_date(), f'{random() * 200:.2f}', products[randrange(len(products))]])
