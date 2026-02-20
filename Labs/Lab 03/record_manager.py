@@ -102,7 +102,7 @@ class SalesDB:
         self.clear_id_cache()
 
         # sorted(key) needs to be a function so key=SaleRecord.sale_id does not work
-        for rec in sorted(self._records, key=(lambda r: r.sale_id)):
+        for rec in self._records:   # sorted(self._records, key=(lambda r: r.sale_id)):
             self._ids.setdefault(rec.sale_id, []).append(rec)
 
         self._ids_initialized = True
