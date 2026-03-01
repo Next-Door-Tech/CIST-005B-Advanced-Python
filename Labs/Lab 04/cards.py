@@ -271,6 +271,9 @@ class Card:
     @face_up.setter
     def face_up(self, value: bool):
         self._face_up = not value
+        
+    def flip(self):
+        self._face_up = not self._face_up
 
     _symbols: dict[tuple[Rank, Suit], str] = {
         (rank, suit): ucd.lookup(f"PLAYING CARD {rank!s} OF {suit!s}") + ucd.lookup('VS15')
