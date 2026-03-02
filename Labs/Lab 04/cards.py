@@ -1,8 +1,8 @@
 import unicodedata as ucd
 from abc import abstractmethod
 from enum import Enum
-from itertools import product
-from functools import cached_property
+from itertools import product, chain
+from functools import singledispatchmethod
 from dataclasses import dataclass, asdict, InitVar, KW_ONLY
 from typing import Literal, ClassVar, overload, Self, Callable
 from collections import deque
@@ -363,56 +363,78 @@ class Kind(OrderedEnum):
 
 
 class Card:
-    __slots__ = ("_rank", "_suit", "_color", "_kind", "_face_up", "__weakref__")
+    __slots__ = ("_kind", "_face_up", "__weakref__")
 
     Ranks = Rank
     Suits = Suit
     Colors = Color
     Kinds = Kind
 
-    def __init__(self, rank: Rank, suit: Suit, face_up: bool = False):
-        self._rank: Rank = Rank(rank)
-        self._suit: Suit = Suit(suit)
-        self._kind: Kind = Kind((Rank(rank), Suit(suit)))
+    @singledispatchmethod
+    def __init__(self, rank: Card.Ranks, suit: Card.Suits, face_up: bool = False):
+        self._kind: Card.Kinds = Card.Kinds(rank, suit)
+        self._face_up: bool = face_up
+
+    @singledispatchmethod
+    def __init__(self, kind: Card.Kinds, face_up: bool = False):
+        self._kind: Card.Kinds = kind
         self._face_up: bool = face_up
 
     @property
-    def suit(self):
-        return self._suit
+    def kind(self) -> Card.Kinds:
+        """The kind of the card, i.e. its rank and suit."""
+        return self._kind
 
     @property
-    def rank(self):
-        return self._rank
+    def rank(self) -> Card.Ranks:
+        """The rank of the card."""
+        return self._kind.rank
+
+    @property
+    def suit(self) -> Card.Suits:
+        """The suit of the card."""
+        return self._kind.suit
+
+    @property
+    def color(self) -> Card.Colors:
+        """The color of the card."""
+        return self._kind.color
 
     @property
     def face_up(self) -> bool:
+        """Whether the card is face up."""
         return self._face_up
 
     @face_up.setter
-    def face_up(self, value: bool):
+    def face_up(self, value: bool) -> None:
         self._face_up = value
 
     @property
     def face_down(self) -> bool:
+        """Whether the card is face down."""
         return not self._face_up
 
     @face_up.setter
-    def face_up(self, value: bool):
+    def face_up(self, value: bool) -> None:
         self._face_up = not value
 
-    def flip(self):
+    def flip(self) -> None:
+        """Flips whether the card is face up or face down."""
         self._face_up = not self._face_up
 
     @property
-    def back_symbol(self):
-        return self._kind.back_symbol
-
-    @cached_property
     def front_symbol(self):
+        """The symbol representing the front of the card."""
         return self._kind.symbol
 
     @property
+    def back_symbol(self):
+        """The symbol representing the back of the card."""
+        return self._kind.back_symbol
+
+    @property
     def symbol(self):
+        """The symbol representing the front or back of the card, as it is currently flipped."""
         return self.front_symbol if self.face_up else self.back_symbol
 
     def __lt__(self, other: Self) -> bool:
