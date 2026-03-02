@@ -1,11 +1,10 @@
 import unicodedata as ucd
-from abc import abstractmethod
 from enum import Enum
 from itertools import product, chain
 from functools import singledispatchmethod
-from typing import overload, Self, Callable
+from typing import overload, Self, TypeVar, Protocol
 from collections import deque
-from collections.abc import MutableSequence
+from collections.abc import MutableSequence, MutableSet, Iterable, Callable
 from identityset import IdentitySet
 from formatspec import FormatSpec
 
@@ -358,95 +357,169 @@ class Card:
                 return format(str(self), format_spec)
 
 
-class Deck(MutableSequence[Card], IdentitySet[Card]):
+class SortAlgorithm[T](Protocol):
+    def __call__(self, iterable: Iterable[T], key: Callable[[T, T], bool] = None, reverse: bool = None) -> list[T]: ...
+
+
+class ComparisonKey[T](Protocol):
+    def __call__(self, left: T, right: T) -> bool: ...
+
+
+class Deck[Card_T: Card](MutableSequence[Card_T], MutableSet[Card_T], IdentitySet[Card_T]):
     """A standard 52-card deck.
 
     Contains a draw pile and a discard pile.
 
+    Ideally, there should be only one Deck per game. If you are implementing a
+    game which uses multiple decks of cards, see Shoe instead.
+
     Once created, Cards always belong to their parent Deck unless they are explicitly deleted with del().
+    Likewise, new Cards can be inserted into the deck using insert().
 
     Cards can be moved from the deck into a hand, but once removed from a hand
     they are automatically returned to the deck's discard pile.
-
     """
 
-    _new_deck_order: tuple[Kind]  # TODO implement
+    _new_deck_order: tuple[Kind] = tuple(chain(
+        (Kind(rank, Card.Suits.SPADES) for rank in Card.Ranks),
+        (Kind(rank, Card.Suits.DIAMONDS) for rank in Card.Ranks),
+        reversed([Kind(rank, Card.Suits.HEARTS) for rank in Card.Ranks]),
+        reversed([Kind(rank, Card.Suits.CLUBS) for rank in Card.Ranks])
+    ))
+    _sort_key: ComparisonKey[Card_T] = None
+    _sort_algorithm: SortAlgorithm[Card_T] = sorted  # Override in subclass for HW assignment
 
-    # TODO implement overloading __init__ for Kind and Rank, Suit
-    # @overload
-    # def __init__(self, kind: Kind, face_up: bool = False):
-    #     ...
-    #
-    # @overload
-    # def __init__(self, rank: Rank, suit: Suit):
-    #     ...
-    #
-    # def __init__(self, rank: Rank = None, suit: Suit = None, kind: Kind = None):
-    #     if rank in Kind:
-    #         kind = rank
-    #         rank = kind.rank
-    #         suit = kind.suit
-    #     else:
+    def __init__(self, *, sort_key: ComparisonKey[Card_T] = None,
+                 sort_algorithm: Callable[[Iterable[Card], Callable[[Card, Card], bool], bool], list[Card]] = None):
+        """Initialize a deck in new deck order.
 
-    _sort_algorithm = sorted  # Override in subclass for HW assignment
-    _sort_key =
+        If subclassing, call super().__init__() after initializing
+        self._draw_pile and self._discard_pile, if non-standard sizes are desired.
 
-    def __init__(self, *, sort_key: Callable[[Card, Card], bool]):  # TODO fix sorting function
-        """Initialize a deck in new deck order."""
-        self._deck = deque[Card](maxlen=52)
-        self._discard = deque[Card](maxlen=52)
-        self._deck.extend([Card(rank, Card.Suits.SPADES) for rank in Card.Ranks])
-        self._deck.extend([Card(rank, Card.Suits.DIAMONDS) for rank in Card.Ranks])
-        self._deck.extend(reversed([Card(rank, Card.Suits.HEARTS) for rank in Card.Ranks]))
-        self._deck.extend(reversed([Card(rank, Card.Suits.CLUBS) for rank in Card.Ranks]))
+        sort_key, if supplied, must compare two Cards by their Kind.
+        sort_algorithm, if supplied, must match the signature and behavior of sorted().
+        """
+        super().__init__()
 
-        self._all_cards: frozenset[Card] = frozenset(self._all_cards)
+        # Allow subclasses to define their own deque sizes and deck orders
+        if not hasattr(self, '_draw_pile'):
+            self._draw_pile = deque[Card](maxlen=52)
+        if len(self._draw_pile) == 0:
+            self._draw_pile.extend(Card(kind) for kind in self._new_deck_order)
+
+        if not hasattr(self, '_discard_pile'):
+            self._discard_pile = deque[Card](maxlen=52)
+
+        self._owned_cards: IdentitySet[Card] = IdentitySet(self._draw_pile)
+
+        if sort_algorithm is not None:
+            self._sort_algorithm = sort_algorithm
+        if sort_key is not None:
+            self._sort_key = sort_key
 
     @property
-    def cards(self) -> frozenset[Card]:
-        return self._cards
+    def draw_pile(self) -> list[Card]:
+        return list(self._draw_pile)
 
-    @overload
-    @abstractmethod
-    def __getitem__(self, index: int) -> Card:
+    @property
+    def discard_pile(self) -> list[Card]:
+        return list(self._discard_pile)
+
+    def sort_draw(self):
+        temp = self._sort_algorithm(self._draw_pile, key=self._sort_key, reverse=False)
+        self._draw_pile.clear()
+        self._draw_pile.extend(temp)
+
+    def sort_discard(self):
+        temp = self._sort_algorithm(self._discard_pile, key=self._sort_key, reverse=False)
+        self._discard_pile.clear()
+        self._discard_pile.extend(temp)
+
+    def sort(self):
+        """Alias for sort_draw()."""
+        self.sort_draw()
+
+    def re_sort(self):
+        """Return all cards from the discard pile to the draw pile, and reshuffle."""
+        self._draw_pile.extend(self._discard_pile)
+        self._discard_pile.clear()
+        self.sort()
+
+    def shuffle_draw(self):  # TODO
+        ...
+
+    def shuffle_discard(self):  # TODO
+        ...
+
+    def shuffle(self):
+        """Alias for shuffle_draw()."""
+        self.shuffle_draw()
+
+    def re_shuffle(self):  # TODO
+        """Return all cards from the discard pile to the draw pile, and reshuffle."""
         ...
 
     @overload
-    @abstractmethod
-    def __getitem__(self, index: slice) -> Hand:
+    def __contains__(self, card: Card) -> bool:
+        """Return whether the deck owns this exact card (by id)."""
         ...
 
-    def __getitem__(self, index):
-        return self._deck[index]
-
     @overload
-    @abstractmethod
-    def __delitem__(self, index: int) -> None: ...
+    def __contains__(self, card: Kind) -> bool:
+        """Return whether the deck owns a card of this kind."""
+        ...
 
-    @overload
-    @abstractmethod
-    def __delitem__(self, index: slice) -> None: ...
+    def __contains__(self, card: Card | Kind) -> bool:
+        if isinstance(card, Card):
+            return card in self._owned_cards
+        elif isinstance(card, Kind):
+            return card in (member.type for member in self._owned_cards)
+        else:
+            raise ValueError
 
-    def __delitem__(self, index):
-        pass
-
-    def __setitem__(self, key, value):
-        pass
-
-    def insert(self, index, value):
-        pass
-
-    def __len__(self):
-        pass
+    # @overload
+    # @abstractmethod
+    # def __getitem__(self, index: int) -> Card:
+    #     ...
+    #
+    # @overload
+    # @abstractmethod
+    # def __getitem__(self, index: slice) -> Hand:
+    #     ...
+    #
+    # def __getitem__(self, index):
+    #     return self._draw_pile[index]
+    #
+    # @overload
+    # @abstractmethod
+    # def __delitem__(self, index: int) -> None: ...
+    #
+    # @overload
+    # @abstractmethod
+    # def __delitem__(self, index: slice) -> None: ...
+    #
+    # def __delitem__(self, index):
+    #     pass
+    #
+    # def __setitem__(self, key, value):
+    #     pass
+    #
+    # def insert(self, index, value):
+    #     pass
+    #
+    # def __len__(self):
+    #     pass
 
 
 class Shoe(Deck):
     """A grouping of multiple 52-card decks treated as one."""
 
-    def __init__(self, num_decks: int):
-        super().__init__()
-        for i in range(num_decks - 1):
-            pass
+    def __init__(self, num_decks: int, *, sort_key: Callable[[Card, Card], bool] = None):
+        super().__init__(sort_key=sort_key)
+        self._deck = deque[Card](maxlen=52 * num_decks)
+        self._discard = deque[Card](maxlen=52 * num_decks)
+        for i in range(num_decks):
+            self._deck.extend(Card(kind) for kind in self._new_deck_order)
 
 
 class Hand(MutableSequence[Card]):
