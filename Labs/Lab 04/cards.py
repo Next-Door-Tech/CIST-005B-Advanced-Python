@@ -1,10 +1,17 @@
 import unicodedata as ucd
+from abc import abstractmethod
 from enum import Enum
 from itertools import product
 from functools import cached_property
 from dataclasses import dataclass, asdict, InitVar, KW_ONLY
-from typing import Literal, ClassVar
+from typing import Literal, ClassVar, overload, Self, Callable
+from collections import deque
+from collections.abc import MutableSequence, Set, MutableSet
 import re
+
+__all__ = ["Card", "Deck", "Shoe", "Hand"]
+
+_non_emoji = ucd.lookup('VS15')  # Unicode modifier preventing use of emoji versions of characters
 
 
 @dataclass
@@ -147,105 +154,226 @@ class IdentitySet[T](MutableSet[T]):  # Adapted from https://stackoverflow.com/a
         return f"{self.__class__.__name__!s}({list(self)!r})"
 
 
+class Rank(OrderedEnum):
+    """The rank of a card. {Ace, Two - Ten, Jack, Queen, King}"""
+
+    def __new__(cls, value, symbol: str, char_symbol: str = None, *aliases):
+        self = object.__new__(cls)
+        self._value_ = value
+        return self
+
+    def __init__(self, value, symbol: str, char_symbol: str = None, *aliases):
+        self._add_value_alias_(self.name)
+
+        self.string = self.name.title()
+        self._add_value_alias_(self.string)
+
+        self.symbol = symbol
+        self._add_value_alias_(self.symbol)
+
+        self.char_symbol = char_symbol or symbol
+        self._add_value_alias_(self.char_symbol)
+
+        for alias in aliases:
+            self._add_value_alias_(alias)
+            if hasattr(alias, "upper"):
+                self._add_value_alias_(alias.upper())
+
+    ACE = 1, 'A'
+    TWO = 2, '2', None, "DEUCE"
+    THREE = 3, '3', None, "TREY"
+    FOUR = 4, '4'
+    FIVE = 5, '5'
+    SIX = 6, '6'
+    SEVEN = 7, '7'
+    EIGHT = 8, '8'
+    NINE = 9, '9'
+    TEN = 10, '10', 'X'
+    JACK = 11, 'J'
+    QUEEN = 12, 'Q'
+    KING = 13, 'K'
+
+    def _add_value_alias_(self, value):
+        super()._add_value_alias_(value)
+        if hasattr(value, "upper"):
+            super()._add_value_alias_(value.upper())
+
+    @classmethod
+    def _missing_(cls, value: str):
+        if hasattr(value, "upper") and value.upper() in cls:
+            return cls(value.upper())
+        else:
+            return None
+
+    def __str__(self):
+        return self.string
+
+    def __format__(self, format_spec):
+        spec = FormatSpec(format_spec)
+
+        match spec.type, spec.alt:
+            case 'c', None:
+                spec.type = 's'
+                return format(self.symbol, str(spec))
+            case 'c', '#':
+                spec.type = 's'
+                spec.alt = None
+                return format(self.char_symbol, str(spec))
+            case _:
+                return format(self.string, format_spec)
+
+
+class Color(Enum):
+    """The color of a card. {Black, Red}"""
+
+    def __new__(cls, value, *aliases):
+        self = object.__new__(cls)
+        self._value_ = value
+        return self
+
+    def __init__(self, value, *aliases):
+        self._add_value_alias_(self.name)
+
+        for alias in aliases:
+            self._add_value_alias_(alias)
+
+    def _add_value_alias_(self, value):
+        super()._add_value_alias_(value)
+        if hasattr(value, "upper"):
+            super()._add_value_alias_(value.upper())
+
+    @classmethod
+    def _missing_(cls, value: str):
+        if hasattr(value, "upper") and value.upper() in cls:
+            return cls(value.upper())
+
+        try:
+            if Suit(value) in cls:
+                return cls(Suit(value))
+        except ValueError:
+            pass
+        else:
+            return None
+
+        return None
+
+    BLACK = "Black", "Clubs", "Spades"
+    RED = "Red", "Diamonds", "Hearts"
+
+
+class Suit(OrderedEnum):
+    """The suit of a card. {Clubs, Diamonds, Hearts, Spades}"""
+
+    def __new__(cls, value, symbol: str, char_symbol: str = None, solid_symbol=None):
+        self = object.__new__(cls)
+        self._value_ = value
+        return self
+
+    def __init__(self, value, symbol: str, char_symbol=None, solid_symbol=None):
+        self._add_value_alias_(self.name)
+
+        self.string = self.name.title()
+        self._add_value_alias_(self.string)  # i.e. Spades
+        self._add_value_alias_(self.string[:-1])  # i.e. Spade
+
+        self.symbol = symbol
+        self._add_value_alias_(self.symbol)
+
+        self.char_symbol = char_symbol or symbol
+        self._add_value_alias_(self.char_symbol)
+
+        self.solid_symbol = solid_symbol or symbol
+        self._add_value_alias_(self.solid_symbol)
+
+        self.color = Color(self.name)
+        # noinspection PyProtectedMember
+        Color(self.name)._add_value_alias_(self)
+
+    SPADES = 0, ucd.lookup('BLACK SPADE SUIT') + _non_emoji, 'S'
+    HEARTS = 1, ucd.lookup('WHITE HEART SUIT') + _non_emoji, 'H', ucd.lookup('BLACK HEART SUIT') + _non_emoji
+    DIAMONDS = 2, ucd.lookup('WHITE DIAMOND SUIT') + _non_emoji, 'D', ucd.lookup('BLACK DIAMOND SUIT') + _non_emoji
+    CLUBS = 3, ucd.lookup('BLACK CLUB SUIT') + _non_emoji, 'C'
+
+    def _add_value_alias_(self, value):
+        super()._add_value_alias_(value)
+        if hasattr(value, "upper"):
+            super()._add_value_alias_(value.upper())
+
+    @classmethod
+    def _missing_(cls, value: str):
+        if hasattr(value, "upper") and value.upper() in cls:
+            return cls(value.upper())
+        else:
+            return None
+
+    def __str__(self):
+        return self.string
+
+    def __format__(self, format_spec):
+        spec = FormatSpec(format_spec)
+
+        match spec.type, spec.alt:
+            case 'c', None:
+                spec.type = 's'
+                return format(self.symbol, str(spec))
+            case 'c', '#':
+                spec.type = 's'
+                spec.alt = None
+                return format(self.char_symbol, str(spec))
+            case _:
+                return format(self.string, format_spec)
+
+
+class Kind(OrderedEnum):
+    """The kind of card; its face value in a 52-card deck."""
+
+    _ignore_ = ["r", "s"]
+
+    def __new__(cls, rank: Rank = None, suit: Suit = None):
+        self = object.__new__(cls)
+        self._value_ = (Rank(rank), Suit(suit))
+        return self
+
+    def __init__(self, rank: Rank = None, suit: Suit = None):
+        self.rank = Rank(rank)
+        self.suit = Suit(suit)
+        self.symbol = ucd.lookup(f"PLAYING CARD {rank!s} OF {suit!s}") + _non_emoji
+        self.back_symbol = ucd.lookup("PLAYING CARD BACK") + _non_emoji
+
+        match suit:  # Determine Color
+            case Suit.CLUBS | Suit.SPADES:
+                self.color = Color.BLACK
+            case Suit.HEARTS | Suit.DIAMONDS:
+                self.color = Color.RED
+
+    for r, s in product(Rank, Suit):  # Generate types from product(Rank, Suit)
+        locals()[f"{r.name}_{s.name}"] = (r, s)
+
+    def __lt__(self, other):
+        return self.rank < other.rank or (self.rank == other.rank and self.suit < other.suit)
+
+    def __le__(self, other):
+        return self.rank < other.rank or (self.rank == other.rank and self.suit <= other.suit)
+
+    def __ge__(self, other):
+        return self.rank > other.rank or (self.rank == other.rank and self.suit > other.suit)
+
+    def __gt__(self, other):
+        return self.rank > other.rank or (self.rank == other.rank and self.suit >= other.suit)
+
+
 class Card:
-    __slots__ = ("_rank", "_suit", "_face_up")
+    __slots__ = ("_rank", "_suit", "_color", "_kind", "_face_up", "__weakref__")
 
-    class Rank(OrderedEnum):
-        def __new__(cls, value, symbol: str, char_symbol: str = None):
-            self = object.__new__(cls)
-            self._value_ = value
-            return self
+    Ranks = Rank
+    Suits = Suit
+    Colors = Color
+    Kinds = Kind
 
-        def __init__(self, value, symbol: str, char_symbol: str = None):
-            self.string = self.name.title()
-            self._add_alias_(self.string)
-            self._add_value_alias_(self.string)
-
-            self.symbol = symbol
-            self._add_alias_(self.symbol)
-            self._add_value_alias_(self.symbol)
-
-            self.char_symbol = char_symbol or symbol
-            self._add_alias_(self.char_symbol)
-            self._add_value_alias_(self.char_symbol)
-
-        ACE = 1, 'A'
-        TWO = 2, '2'
-        THREE = 3, '3'
-        FOUR = 4, '4'
-        FIVE = 5, '5'
-        SIX = 6, '6'
-        SEVEN = 7, '7'
-        EIGHT = 8, '8'
-        NINE = 9, '9'
-        TEN = 10, '10', 'X'
-        JACK = 11, 'J'
-        QUEEN = 12, 'Q'
-        KING = 13, 'K'
-
-        def __str__(self):
-            return self.string
-
-        def __format__(self, format_spec):
-            spec = FormatSpec(format_spec)
-
-            match spec.type, spec.alt:
-                case 'c', None:
-                    spec.type = 's'
-                    return format(self.symbol, str(spec))
-                case 'c', '#':
-                    spec.type = 's'
-                    spec.alt = None
-                    return format(self.char_symbol, str(spec))
-                case _:
-                    return format(self.string, format_spec)
-
-    class Suit(OrderedEnum):
-        def __new__(cls, value, symbol: str, char_symbol: str = None):
-            self = object.__new__(cls)
-            self._value_ = value
-            return self
-
-        def __init__(self, value, symbol: str, char_symbol=None):
-            self.string = self.name.title()
-            self._add_alias_(self.string)  # i.e. Spades
-            self._add_alias_(self.string[:-1])  # i.e. Spade
-            self._add_value_alias_(self.string)
-            self._add_value_alias_(self.string[:-1])
-
-            self.symbol = symbol
-            self._add_alias_(self.symbol)
-            self._add_value_alias_(self.symbol)
-
-            self.char_symbol = char_symbol or symbol
-            self._add_alias_(self.char_symbol)
-            self._add_value_alias_(self.char_symbol)
-
-        SPADES = 0, ucd.lookup('BLACK SPADE SUIT') + ucd.lookup('VS15'), 'S'
-        HEARTS = 1, ucd.lookup('WHITE HEART SUIT') + ucd.lookup('VS15'), 'H'
-        DIAMONDS = 2, ucd.lookup('WHITE DIAMOND SUIT') + ucd.lookup('VS15'), 'D'
-        CLUBS = 3, ucd.lookup('BLACK CLUB SUIT') + ucd.lookup('VS15'), 'C'
-
-        def __str__(self):
-            return self.string
-
-        def __format__(self, format_spec):
-            spec = FormatSpec(format_spec)
-
-            match spec.type, spec.alt:
-                case 'c', None:
-                    spec.type = 's'
-                    return format(self.symbol, str(spec))
-                case 'c', '#':
-                    spec.type = 's'
-                    spec.alt = None
-                    return format(self.char_symbol, str(spec))
-                case _:
-                    return format(self.string, format_spec)
-
-    def __init__(self, rank: Rank, suit: Suit, face_up: bool = True):
-        self._rank: Card.Rank = self.Rank(rank)
-        self._suit: Card.Suit = self.Suit(suit)
+    def __init__(self, rank: Rank, suit: Suit, face_up: bool = False):
+        self._rank: Rank = Rank(rank)
+        self._suit: Suit = Suit(suit)
+        self._kind: Kind = Kind((Rank(rank), Suit(suit)))
         self._face_up: bool = face_up
 
     @property
@@ -271,44 +399,38 @@ class Card:
     @face_up.setter
     def face_up(self, value: bool):
         self._face_up = not value
-        
+
     def flip(self):
         self._face_up = not self._face_up
 
-    _symbols: dict[tuple[Rank, Suit], str] = {
-        (rank, suit): ucd.lookup(f"PLAYING CARD {rank!s} OF {suit!s}") + ucd.lookup('VS15')
-        for rank, suit in product(Rank, Suit)
-    }
-    _back_symbol = ucd.lookup("PLAYING CARD BACK") + ucd.lookup('VS15')
-
     @property
     def back_symbol(self):
-        return self._back_symbol
+        return self._kind.back_symbol
 
     @cached_property
     def front_symbol(self):
-        return self._symbols[self.rank, self.suit]
+        return self._kind.symbol
 
     @property
     def symbol(self):
         return self.front_symbol if self.face_up else self.back_symbol
 
-    def __lt__(self, other):
-        return self.rank < other.rank or (self.rank == other.rank and self.suit < other.suit)
+    def __lt__(self, other: Self) -> bool:
+        return self._kind < other._kind
 
-    def __le__(self, other):
-        return self.rank < other.rank or (self.rank == other.rank and self.suit <= other.suit)
+    def __le__(self, other: Self) -> bool:
+        return self._kind <= other._kind
 
-    def __ge__(self, other):
-        return self.rank > other.rank or (self.rank == other.rank and self.suit > other.suit)
+    def __ge__(self, other: Self) -> bool:
+        return self._kind >= other._kind
 
-    def __gt__(self, other):
-        return self.rank > other.rank or (self.rank == other.rank and self.suit >= other.suit)
+    def __gt__(self, other: Self) -> bool:
+        return self._kind > other._kind
 
-    def __eq__(self, other):
-        return self.rank, self.suit == other.rank, other.suit
+    def __eq__(self, other: Self) -> bool:
+        return self._kind == other._kind
 
-    def __ne__(self, other):
+    def __ne__(self, other: Self) -> bool:
         return not self == other
 
     def __str__(self):
@@ -338,3 +460,116 @@ class Card:
 
             case _:
                 return format(str(self), format_spec)
+
+
+class Deck(MutableSequence[Card], FrozenIdentitySet[Card]):
+    """A standard 52-card deck.
+
+    Contains a draw pile and a discard pile.
+
+    Once created, Cards always belong to their parent Deck unless they are explicitly deleted with del().
+
+    Cards can be moved from the deck into a hand, but once removed from a hand
+    they are automatically returned to the deck's discard pile.
+
+    """
+
+    _new_deck_order: tuple[Kind]  # TODO implement
+
+    # TODO implement overloading __init__ for Kind and Rank, Suit
+    # @overload
+    # def __init__(self, kind: Kind, face_up: bool = False):
+    #     ...
+    #
+    # @overload
+    # def __init__(self, rank: Rank, suit: Suit):
+    #     ...
+    #
+    # def __init__(self, rank: Rank = None, suit: Suit = None, kind: Kind = None):
+    #     if rank in Kind:
+    #         kind = rank
+    #         rank = kind.rank
+    #         suit = kind.suit
+    #     else:
+
+    _sort_algorithm = sorted  # Override in subclass for HW assignment
+    _sort_key =
+
+    def __init__(self, *, sort_key: Callable[[Card, Card], bool]):  # TODO fix sorting function
+        """Initialize a deck in new deck order."""
+        self._deck = deque[Card](maxlen=52)
+        self._discard = deque[Card](maxlen=52)
+        self._deck.extend([Card(rank, Card.Suits.SPADES) for rank in Card.Ranks])
+        self._deck.extend([Card(rank, Card.Suits.DIAMONDS) for rank in Card.Ranks])
+        self._deck.extend(reversed([Card(rank, Card.Suits.HEARTS) for rank in Card.Ranks]))
+        self._deck.extend(reversed([Card(rank, Card.Suits.CLUBS) for rank in Card.Ranks]))
+
+        self._all_cards: frozenset[Card] = frozenset(self._all_cards)
+
+    @property
+    def cards(self) -> frozenset[Card]:
+        return self._cards
+
+    @overload
+    @abstractmethod
+    def __getitem__(self, index: int) -> Card:
+        ...
+
+    @overload
+    @abstractmethod
+    def __getitem__(self, index: slice) -> Hand:
+        ...
+
+    def __getitem__(self, index):
+        return self._deck[index]
+
+    @overload
+    @abstractmethod
+    def __delitem__(self, index: int) -> None: ...
+
+    @overload
+    @abstractmethod
+    def __delitem__(self, index: slice) -> None: ...
+
+    def __delitem__(self, index):
+        pass
+
+    def __setitem__(self, key, value):
+        pass
+
+    def insert(self, index, value):
+        pass
+
+    def __len__(self):
+        pass
+
+
+class Shoe(Deck):
+    """A grouping of multiple 52-card decks treated as one."""
+
+    def __init__(self, num_decks: int):
+        super().__init__()
+        for i in range(num_decks - 1):
+            pass
+
+
+class Hand(MutableSequence[Card]):
+    """A hand of cards. Must be a subset of a Deck or Shoe."""
+
+    def __init__(self):
+        pass
+
+    def add(self, value):
+        pass
+
+    def discard(self, value):
+        pass
+
+    def __contains__(self, x):
+        pass
+
+    def __len__(self):
+        pass
+
+    def __iter__(self):
+        pass
