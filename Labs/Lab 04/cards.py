@@ -365,7 +365,7 @@ class ComparisonKey[T](Protocol):
     def __call__(self, left: T, right: T) -> bool: ...
 
 
-class Deck[Card_T: Card](MutableSequence[Card_T], MutableSet[Card_T], IdentitySet[Card_T]):
+class Deck(MutableSequence[Card], IdentitySet[Card]):
     """A standard 52-card deck.
 
     Contains a draw pile and a discard pile.
@@ -386,11 +386,11 @@ class Deck[Card_T: Card](MutableSequence[Card_T], MutableSet[Card_T], IdentitySe
         reversed([Kind(rank, Card.Suits.HEARTS) for rank in Card.Ranks]),
         reversed([Kind(rank, Card.Suits.CLUBS) for rank in Card.Ranks])
     ))
-    _sort_key: ComparisonKey[Card_T] = None
-    _sort_algorithm: SortAlgorithm[Card_T] = sorted  # Override in subclass for HW assignment
+    _sort_key: ComparisonKey[Card] = None
+    _sort_algorithm: SortAlgorithm[Card] = sorted  # Override in subclass for HW assignment
 
-    def __init__(self, *, sort_key: ComparisonKey[Card_T] = None,
-                 sort_algorithm: Callable[[Iterable[Card], Callable[[Card, Card], bool], bool], list[Card]] = None):
+    def __init__(self, *, sort_key: ComparisonKey[Card] = None,
+                 sort_algorithm: SortAlgorithm[Card] = None):
         """Initialize a deck in new deck order.
 
         If subclassing, call super().__init__() after initializing
@@ -440,7 +440,7 @@ class Deck[Card_T: Card](MutableSequence[Card_T], MutableSet[Card_T], IdentitySe
         self.sort_draw()
 
     def re_sort(self):
-        """Return all cards from the discard pile to the draw pile, and reshuffle."""
+        """Return all cards from the discard pile to the draw pile, and re-sort the deck."""
         self._draw_pile.extend(self._discard_pile)
         self._discard_pile.clear()
         self.sort()
@@ -457,6 +457,14 @@ class Deck[Card_T: Card](MutableSequence[Card_T], MutableSet[Card_T], IdentitySe
 
     def re_shuffle(self):  # TODO
         """Return all cards from the discard pile to the draw pile, and reshuffle."""
+        ...
+
+    def return_top(self):  # TODO
+        """Return all cards from the discard pile to the top of the draw pile."""
+        ...
+
+    def return_bottom(self):  # TODO
+        """Return all cards from the discard pile to the bottom of the draw pile."""
         ...
 
     @overload
@@ -515,11 +523,12 @@ class Shoe(Deck):
     """A grouping of multiple 52-card decks treated as one."""
 
     def __init__(self, num_decks: int, *, sort_key: Callable[[Card, Card], bool] = None):
-        super().__init__(sort_key=sort_key)
         self._deck = deque[Card](maxlen=52 * num_decks)
         self._discard = deque[Card](maxlen=52 * num_decks)
         for i in range(num_decks):
             self._deck.extend(Card(kind) for kind in self._new_deck_order)
+
+        super().__init__(sort_key=sort_key)
 
 
 class Hand(MutableSequence[Card]):
