@@ -1,16 +1,21 @@
+from time import perf_counter_ns
+from datetime import date
 import csv
+import tempfile
 from pprint import pprint
+from typing import Callable
+
+import numpy as np
+from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 
 from csv_gen import csv_write_records
 from record_manager import SalesDB, SaleRecord, USD
-import tempfile
-from time import perf_counter_ns
-from datetime import date
 
 
 def test_timer() -> dict[str, dict[int, list[int]]]:
     repetitions = 10
-    sizes = [10, 100, 1_000, 10_000, 100_000]
+    sizes = [0, 1, 10, 100, 1_000, 10_000, 100_000, 1_000_000]
     tests = [
         "load file",
         "latest", "latest with index",
@@ -35,6 +40,13 @@ def test_timer() -> dict[str, dict[int, list[int]]]:
 
                 db.insert(SaleRecord(sale_id, sale_date, amount, product))
 
+    def timing_helper(desc: str, fn: Callable, *args, **kwargs):
+        nonlocal timings
+        start = perf_counter_ns()
+        fn(*args, **kwargs)
+        end = perf_counter_ns()
+        timings[desc][n].append(end - start)
+
     for n in sizes:
         db = SalesDB()
 
@@ -48,73 +60,47 @@ def test_timer() -> dict[str, dict[int, list[int]]]:
             load_file()  # prevent first iteration being longer than normal
             for i in range(repetitions):
                 db.clear()
-
-                # load records from file
-                start = perf_counter_ns()
-                load_file()
-                end = perf_counter_ns()
-                timings["load file"][n].append(end - start)
+                timing_helper("load file", load_file)
 
         # time finding latest record
         db.get_latest()
         for i in range(repetitions):
             db.clear_date_cache()
-
-            start = perf_counter_ns()
-            db.get_latest()
-            end = perf_counter_ns()
-            timings["latest"][n].append(end - start)
+            timing_helper("latest", db.get_latest)
 
         # time finding latest record with date index cached
         db.get_latest()
         for i in range(repetitions):
-            start = perf_counter_ns()
-            db.get_latest()
-            end = perf_counter_ns()
-            timings["latest with index"][n].append(end - start)
+            timing_helper("latest with index", db.get_latest)
 
         # time finding total revenue
         db.total_revenue()
         for i in range(repetitions):
-            start = perf_counter_ns()
-            db.total_revenue()
-            end = perf_counter_ns()
-            timings["total revenue"][n].append(end - start)
+            timing_helper("total revenue", db.total_revenue)
 
         # time finding duplicate ids
         db.get_duplicates()
         for i in range(repetitions):
             db.clear_id_cache()
-            start = perf_counter_ns()
-            db.get_duplicates()
-            end = perf_counter_ns()
-            timings["duplicates"][n].append(end - start)
+            timing_helper("duplicates", db.get_duplicates)
 
         # time finding duplicate ids with id index cached
         db.get_duplicates()
         for i in range(repetitions):
-            start = perf_counter_ns()
-            db.get_duplicates()
-            end = perf_counter_ns()
-            timings["duplicates with index"][n].append(end - start)
+            timing_helper("duplicates with index", db.get_duplicates)
 
         # time retrieving records by id
         db.get_by_id(-1)
         for i in range(repetitions):
             db.clear_id_cache()
-            start = perf_counter_ns()
-            db.get_by_id(-1)
-            end = perf_counter_ns()
-            timings["by id"][n].append(end - start)
+            timing_helper("by id", db.get_by_id, -1)
 
+        # time retrieving records by id with id index cached
         db.get_by_id(-1)
         for i in range(repetitions):
-            start = perf_counter_ns()
-            db.get_by_id(-1)
-            end = perf_counter_ns()
-            timings["by id with index"][n].append(end - start)
+            timing_helper("by id with index", db.get_by_id, -1)
 
     return timings
 
 
-pprint(test_timer(), compact=True, width=240)
+pprint(test_timer(), compact=True, width=240, underscore_numbers=True, sort_dicts=False)
