@@ -6,6 +6,10 @@ from collections import deque
 from collections.abc import MutableSequence, MutableSet, Iterable, Callable
 from identityset import IdentitySet
 from formatspec import FormatSpec
+import sys
+
+if sys.version_info < (15, 0):  # frozendict is a built-in type on python 15
+    from frozendict import frozendict
 
 __all__ = ["Card", "Deck", "Shoe", "Hand"]
 
@@ -395,7 +399,7 @@ class ComparisonKey[T](Protocol):
     def __call__(self, left: T, right: T) -> bool: ...
 
 
-class Deck(MutableSequence[Card], IdentitySet[Card]):
+class Deck(MutableSequence[Card]):
     """A standard 52-card deck.
 
     Contains a draw pile and a discard pile.
@@ -440,7 +444,13 @@ class Deck(MutableSequence[Card], IdentitySet[Card]):
         if not hasattr(self, '_discard_pile'):
             self._discard_pile = deque[Card](maxlen=52)
 
-        self._owned_cards: IdentitySet[Card] = IdentitySet(self._draw_pile)
+        self._owned_cards = {kind: [] for kind in Card.Kinds}
+        for card in self._draw_pile:
+            self._owned_cards[card.kind].append(card)
+
+        self._owned_cards: frozendict[type[Card.Kinds], tuple[Card, ...]] = frozendict(
+            {kind: tuple(self._owned_cards[kind]) for kind in self._owned_cards}
+        )
 
         if sort_algorithm is not None:
             self._sort_algorithm = sort_algorithm
