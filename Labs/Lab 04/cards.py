@@ -265,10 +265,10 @@ class Kind(OrderedEnum):
 class Card:
     __slots__ = ("_kind", "_face_up", "__weakref__")
 
-    Ranks: Rank = staticmethod(Rank)
-    Suits: Suit = staticmethod(Suit)
-    Colors: Color = staticmethod(Color)
-    Kinds: Kind = staticmethod(Kind)
+    Ranks: type[Rank] = staticmethod(Rank)
+    Suits: type[Suit] = staticmethod(Suit)
+    Colors: type[Color] = staticmethod(Color)
+    Kinds: type[Kind] = staticmethod(Kind)
 
     @overload
     def __init__(self, rank: Card.Ranks, suit: Card.Suits, *, face_up: bool = False):
