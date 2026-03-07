@@ -442,7 +442,7 @@ class Deck(MutableSequence[Card]):
             self._draw_pile.extend(Card(kind) for kind in self._new_deck_order)
 
         if not hasattr(self, '_discard_pile'):
-            self._discard_pile = deque[Card](maxlen=52)
+            self._discard_pile = deque[Card](maxlen=self._draw_pile.maxlen)
 
         self._owned_cards = {kind: [] for kind in Card.Kinds}
         for card in self._draw_pile:
@@ -562,13 +562,13 @@ class Deck(MutableSequence[Card]):
 class Shoe(Deck):
     """A grouping of multiple 52-card decks treated as one."""
 
-    def __init__(self, num_decks: int, *, sort_key: Callable[[Card, Card], bool] = None):
-        self._deck = deque[Card](maxlen=52 * num_decks)
-        self._discard = deque[Card](maxlen=52 * num_decks)
-        for i in range(num_decks):
+    def __init__(self, num_decks: int, *, sort_key: Callable[[Card, Card], bool] = None,
+                 sort_algorithm: SortAlgorithm[Card] = None):
+        self._draw_pile = deque[Card](maxlen=52 * num_decks)
+        for _ in range(num_decks):
             self._deck.extend(Card(kind) for kind in self._new_deck_order)
 
-        super().__init__(sort_key=sort_key)
+        super().__init__(sort_key=sort_key, sort_algorithm=sort_algorithm)
 
 
 class Hand(MutableSequence[Card]):
