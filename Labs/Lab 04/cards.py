@@ -424,8 +424,7 @@ class Deck(MutableSequence[Card]):
     _sort_key: ComparisonKey[Card] = None
     _sort_algorithm: SortAlgorithm[Card] = sorted  # Override in subclass for HW assignment
 
-    def __init__(self, *, sort_key: ComparisonKey[Card] = None,
-                 sort_algorithm: SortAlgorithm[Card] = None):
+    def __init__(self, *, sort_key: ComparisonKey[Card] = None, sort_algorithm: SortAlgorithm[Card] = None):
         """Initialize a deck in new deck order.
 
         If subclassing, call super().__init__() after initializing
