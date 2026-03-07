@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from functools import singledispatchmethod
 from typing import *
 from collections.abc import MutableSequence, Iterable
@@ -58,12 +57,10 @@ class LinkedList[T](MutableSequence[T]):
         pass
 
     @overload
-    @abstractmethod
     def __getitem__(self, index: int) -> T:
         ...
 
     @overload
-    @abstractmethod
     def __getitem__(self, index: slice) -> MutableSequence[T]:
         ...
 
@@ -84,12 +81,10 @@ class LinkedList[T](MutableSequence[T]):
         pass
 
     @overload
-    @abstractmethod
     def __setitem__(self, index: int, value: T) -> None:
         ...
 
     @overload
-    @abstractmethod
     def __setitem__(self, index: slice, value: Iterable[T]) -> None:
         ...
 
@@ -97,12 +92,10 @@ class LinkedList[T](MutableSequence[T]):
         pass
 
     @overload
-    @abstractmethod
     def __delitem__(self, index: int) -> None:
         ...
 
     @overload
-    @abstractmethod
     def __delitem__(self, index: slice) -> None:
         ...
 
