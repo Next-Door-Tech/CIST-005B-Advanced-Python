@@ -525,38 +525,44 @@ class Deck(MutableSequence[Card]):
         else:
             raise ValueError
 
-    # @overload
-    # @abstractmethod
-    # def __getitem__(self, index: int) -> Card:
-    #     ...
-    #
-    # @overload
-    # @abstractmethod
-    # def __getitem__(self, index: slice) -> Hand:
-    #     ...
-    #
-    # def __getitem__(self, index):
-    #     return self._draw_pile[index]
-    #
-    # @overload
-    # @abstractmethod
-    # def __delitem__(self, index: int) -> None: ...
-    #
-    # @overload
-    # @abstractmethod
-    # def __delitem__(self, index: slice) -> None: ...
-    #
-    # def __delitem__(self, index):
-    #     pass
-    #
-    # def __setitem__(self, key, value):
-    #     pass
-    #
-    # def insert(self, index, value):
-    #     pass
-    #
-    # def __len__(self):
-    #     pass
+    @overload
+    def __getitem__(self, index: int) -> Card:
+        ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Hand:
+        ...
+
+    def __getitem__(self, index):
+        return self._draw_pile[index]
+
+    @overload
+    def __delitem__(self, index: int) -> None:
+        ...
+
+    @overload
+    def __delitem__(self, index: slice) -> None:
+        ...
+
+    def __delitem__(self, index):
+        pass
+
+    def __setitem__(self, key, value):
+        pass
+
+    def insert(self, index, value):
+        pass
+
+    def __len__(self):
+        return len(self._owned_cards)
+
+    def _o_n_sort(self, pile: deque, key: None = None, reverse: bool = False):  # TODO implement key and reverse
+
+        counter = {}
+        for card in pile:
+            counter.setdefault(card.kind, []).append(card)
+
+        return chain(*(counter[kind] for kind in self._new_deck_order if kind in counter))
 
 
 class Shoe(Deck):
