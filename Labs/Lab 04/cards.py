@@ -1,7 +1,6 @@
 import unicodedata as ucd
 from enum import Enum
 from itertools import product, chain
-from functools import singledispatchmethod
 from typing import overload, Self, TypeVar, Protocol
 from collections import deque
 from collections.abc import MutableSequence, MutableSet, Iterable, Callable
@@ -262,19 +261,26 @@ class Kind(OrderedEnum):
 class Card:
     __slots__ = ("_kind", "_face_up", "__weakref__")
 
-    Ranks = Rank
-    Suits = Suit
-    Colors = Color
-    Kinds = Kind
+    Ranks: Rank = staticmethod(Rank)
+    Suits: Suit = staticmethod(Suit)
+    Colors: Color = staticmethod(Color)
+    Kinds: Kind = staticmethod(Kind)
 
-    @singledispatchmethod
-    def __init__(self, rank: Card.Ranks, suit: Card.Suits, face_up: bool = False):
-        self._kind: Card.Kinds = Card.Kinds(rank, suit)
+    @overload
+    def __init__(self, rank: Card.Ranks, suit: Card.Suits, *, face_up: bool = False):
+        self._kind: Card.Kinds = self.Kinds(rank, suit)
         self._face_up: bool = face_up
 
-    @singledispatchmethod
-    def __init__(self, kind: Card.Kinds, face_up: bool = False):
+    @overload
+    def __init__(self, kind: Card.Kinds, *, face_up: bool = False):
         self._kind: Card.Kinds = kind
+        self._face_up: bool = face_up
+
+    def __init__(self, *args, face_up: bool = False, **kwargs):
+        if len(args) == 1:
+            self._kind: Card.Kinds = self.Kinds(args[0])
+        else:  # len(args) == 2
+            self._kind: Card.Kinds = self.Kinds(*args[0:1])
         self._face_up: bool = face_up
 
     @property
@@ -350,7 +356,7 @@ class Card:
         return self._kind == other._kind
 
     def __ne__(self, other: Self) -> bool:
-        return not self == other
+        return self._kind != other.kind
 
     def __str__(self):
         return f"[{self.rank!s} of {self.suit!s}]" if self.face_up else "[A face down card.]"
