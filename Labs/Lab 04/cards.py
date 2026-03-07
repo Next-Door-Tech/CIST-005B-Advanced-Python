@@ -48,6 +48,8 @@ class Rank(OrderedEnum):
         self._add_value_alias_(self.char_symbol)
 
         for alias in aliases:
+            if isinstance(alias, str):
+                self._add_alias_(alias.upper())
             self._add_value_alias_(alias)
             if hasattr(alias, "upper"):
                 self._add_value_alias_(alias.upper())
@@ -208,16 +210,13 @@ class Kind(OrderedEnum):
         return self
 
     def __init__(self, rank: Rank = None, suit: Suit = None):
-        self.rank = Rank(rank)
-        self.suit = Suit(suit)
-        self.symbol = ucd.lookup(f"PLAYING CARD {rank!s} OF {suit!s}") + _non_emoji
-        self.back_symbol = ucd.lookup("PLAYING CARD BACK") + _non_emoji
+        self.rank: Rank = Rank(rank)
+        self.suit: Suit = Suit(suit)
+        self.symbol: str = ucd.lookup(f"PLAYING CARD {rank!s} OF {suit!s}") + _non_emoji
+        self.back_symbol: str = ucd.lookup("PLAYING CARD BACK") + _non_emoji
+        self.color: Color = self.suit.color
 
-        match suit:  # Determine Color
-            case Suit.CLUBS | Suit.SPADES:
-                self.color = Color.BLACK
-            case Suit.HEARTS | Suit.DIAMONDS:
-                self.color = Color.RED
+        self._add_value_alias_((str(self.rank), str(self.suit)))
 
     for r, s in product(Rank, Suit):  # Generate types from product(Rank, Suit)
         locals()[f"{r.name}_{s.name}"] = (r, s)
@@ -233,6 +232,31 @@ class Kind(OrderedEnum):
 
     def __gt__(self, other):
         return self.rank > other.rank or (self.rank == other.rank and self.suit >= other.suit)
+
+    @classmethod
+    def _missing_(cls, value):
+        match value:
+            case (Rank(rank) | str(rank), Suit(suit) | str(suit)) if (Rank(rank), Suit(suit)) in cls:
+                return cls(Rank(rank), Suit(suit))
+            case (Suit(suit), Rank(rank) | str(rank)) if (Rank(rank), Suit(suit)) in cls:
+                return cls(Rank(rank), Suit(suit))
+            case (Suit(suit) | str(suit), Rank(rank)) if (Rank(rank), Suit(suit)) in cls:
+                return cls(Rank(rank), Suit(suit))
+            case str() if value.upper() in cls:
+                return cls(value.upper())
+            case str():  # TODO add search matching for names of rank and suit
+                raise NotImplementedError
+            case _:
+                return None
+
+        return None  # Should be unreachable, but just in case.
+
+    def _add_value_alias_(self, value):
+        super()._add_value_alias_(value)
+        if hasattr(value, "upper"):
+            super()._add_value_alias_(value.upper())
+        if isinstance(value, tuple | list):
+            super()._add_value_alias_((item.upper() if hasattr(item, "upper") else item for item in value))
 
 
 class Card:
