@@ -1,6 +1,7 @@
 import unicodedata as ucd
 from enum import Enum
 from itertools import product, chain
+from random import shuffle
 from typing import overload, Self, TypeVar, Protocol
 from collections import deque
 from collections.abc import MutableSequence, MutableSet, Iterable, Callable
@@ -485,11 +486,11 @@ class Deck(MutableSequence[Card]):
         self._discard_pile.clear()
         self.sort()
 
-    def shuffle_draw(self):  # TODO
-        ...
+    def shuffle_draw(self):
+        shuffle(self._draw_pile)
 
-    def shuffle_discard(self):  # TODO
-        ...
+    def shuffle_discard(self):
+        shuffle(self._discard_pile)
 
     def shuffle(self):
         """Alias for shuffle_draw()."""
