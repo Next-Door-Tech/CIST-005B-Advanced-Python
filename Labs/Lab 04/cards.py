@@ -562,7 +562,7 @@ class Deck(MutableSequence[Card]):
         for card in pile:
             counter.setdefault(card.kind, []).append(card)
 
-        return chain(*(counter[kind] for kind in self._new_deck_order if kind in counter))
+        return chain.from_iterable(counter[kind] for kind in self._new_deck_order if kind in counter)
 
 
 class Shoe(Deck):
