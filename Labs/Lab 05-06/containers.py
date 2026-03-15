@@ -461,3 +461,14 @@ class LinkedList[T](MutableSequence[T]):
 
     def __str__(self):
         return "[" + ", ".join(self) + "]"
+
+
+class LinkedStack[T](LinkedList[T]):
+    def push(self, value: T) -> None:
+        self.prepend(value)
+
+    def peek(self) -> T:
+        return self.head.value
+
+    def is_empty(self) -> bool:
+        return len(self) == 0
