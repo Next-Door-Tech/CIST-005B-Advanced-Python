@@ -472,3 +472,11 @@ class LinkedStack[T](LinkedList[T]):
 
     def is_empty(self) -> bool:
         return len(self) == 0
+
+
+class LinkedQueue[T](LinkedList[T]):
+    def enqueue(self, item):
+        self.append(item)
+
+    def dequeue(self, item):
+        self.pop(0)
