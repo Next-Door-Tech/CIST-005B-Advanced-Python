@@ -128,16 +128,24 @@ class Sentinel(Node):
             self._head = self._tail = self
         elif self._head is self and self._tail is self:
             self._head = self._tail = node
+        elif node.forward is None or node.forward is self._head:
+            node.forward = self._head
+            self._head = node
         else:
-            self._tail = node
-            self._tail.forward = self
+            t = node
+            while not (any(t.forward is x for x in (None, self._head, node))
+                       or isinstance(t.forward, type(self))):
+                t = t.forward
 
-        # assert self._head >= self, "Sentinel chain is not closed after assignment."
+            t.forward = self._head
+            self._head = node
+
+            assert self._head >= self, "Sentinel chain is not closed after assignment."
 
     @head.deleter
     def head(self):
         if self.head is not self:
-            self.head = self.head.traverse(1)
+            self.head = self.head.traverse(1)   # call head.setter; performs checks
         else:
             raise IndexError(f"{type(self)} already points to an empty chain")
 
