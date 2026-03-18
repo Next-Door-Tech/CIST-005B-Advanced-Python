@@ -126,7 +126,7 @@ class Sentinel(Node):
     def head(self, node: Node) -> None:
         if node is self:
             self._head = self._tail = self
-        elif self._head == self._tail:
+        elif self._head is self and self._tail is self:
             self._head = self._tail = node
         else:
             self._tail = node
