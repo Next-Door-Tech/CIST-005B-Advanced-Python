@@ -145,7 +145,7 @@ class Sentinel(Node):
     @head.deleter
     def head(self):
         if self.head is not self:
-            self.head = self.head.traverse(1)   # call head.setter; performs checks
+            self.head = self.head.traverse(1)  # call head.setter; performs checks
         else:
             raise IndexError(f"{type(self)} already points to an empty chain")
 
