@@ -2,6 +2,130 @@ from typing import Self, overload
 from collections.abc import MutableSequence, Iterable, Reversible, Container
 
 
+class cirque[T](MutableSequence[T]):  # noqa: N802
+    """A circular queue, emulated in python."""
+
+    def __new__(cls, max_len: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
+        match max_len:
+            case int() if max_len >= 0:
+                return super().__new__(cls)
+            case int():
+                raise ValueError(f"{cls.__name__} parameter max_len cannot be negative")
+            case _:
+                raise TypeError(f"{cls.__name__} parameter max_len must be an integer, not '{type(max_len)}'")
+
+    def __init__(self, max_len: int = 0, iterable: Iterable[T] = None):
+
+        self._max_len: int = max_len
+        self._len: int = 0
+        self._array: list[T] = [None] * max_len
+
+        if iterable is not None:
+            self.extend(iterable)
+
+    def __len__(self) -> int:
+        return self._len
+
+    @property
+    def len(self) -> int:
+        return len(self)
+
+    @property
+    def max_len(self) -> int:
+        return self._max_len
+
+    @max_len.setter
+    def max_len(self, max_len: int) -> None:
+        if not isinstance(max_len, int):
+            raise TypeError(f"{self.__class__.__name__} parameter max_len must be an integer, not '{type(max_len)}'")
+        if max_len < 0:
+            raise ValueError(f"{self.__class__.__name__} parameter max_len cannot be negative")
+
+        raise NotImplementedError  # TODO: have max_len dynamically resize the array, truncating if requested
+
+    def append(self, x, /) -> None:
+        raise NotImplementedError  # TODO
+        self._len += 1
+
+    def appendleft(self, x, /) -> None:
+        raise NotImplementedError  # TODO
+        self._len += 1
+
+    def copy(self) -> Self:
+        raise NotImplementedError  # TODO
+
+    def count(self, x, /) -> int:
+        raise NotImplementedError  # TODO
+
+    def extend(self, iterable, /) -> None:
+        raise NotImplementedError  # TODO
+
+    def extendleft(self, iterable, /) -> None:
+        raise NotImplementedError  # TODO
+
+    def insert(self, i, x, /) -> None:
+        raise NotImplementedError  # TODO
+
+    def index(self, x: T, start: int = 0, stop: int = None, /) -> int:
+        ...
+        # return super().index(x, start, stop)
+
+    def pop(self, index: int = -1) -> T:
+        pass
+        # return super().pop()
+
+    def popleft(self) -> T:
+        pass
+        # return super().popleft()
+
+    def remove(self, value, /) -> None:
+        pass
+        # super().remove(value)
+
+    def rotate(self, n=1, /) -> None:
+        pass
+        # super().rotate(n)
+
+    def __lshift__(self, n) -> None:
+        self.rotate(-n)
+
+    def __rshift__(self, n) -> None:
+        self.rotate(n)
+
+    @overload
+    def __getitem__(self, index: int) -> T:
+        ...
+
+    @overload
+    def __getitem__(self, index: slice) -> Self:
+        ...
+
+    def __getitem__(self, index) -> T | Self:
+        ...  # FIXME
+
+    @overload
+    def __setitem__(self, index: int, value: T) -> None:
+        ...
+
+    @overload
+    def __setitem__(self, index: slice, value: Iterable[T]) -> None:
+        ...
+
+    def __setitem__(self, index, value) -> None:
+        ...  # FIXME
+
+    @overload
+    def __delitem__(self, index: int) -> None:
+        ...
+
+    @overload
+    def __delitem__(self, index: slice) -> None:
+        ...
+
+    def __delitem__(self, index) -> None:
+        ...  # FIXME
+
+
 class Node[T](Iterable[T], Container[T]):
     __slots__ = ('_value', '_forward', '__weakref__')
 
