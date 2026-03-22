@@ -5,13 +5,13 @@ from copy import copy, deepcopy
 from abc import ABC
 
 
-class _CommonMethods(Collection, ABC):
+class _CommonMethods[T](Collection[T], ABC):
     @overload
-    def _check_index(self, index: int, *, int_only: bool = False) -> int | NoReturn:
+    def _check_index(self, index: int, *, int_only: bool = False) -> int:
         ...
 
     @overload
-    def _check_index(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
+    def _check_index(self, index: slice, *, int_only: bool = False) -> range:
         ...
 
     @overload
@@ -32,11 +32,11 @@ class _CommonMethods(Collection, ABC):
                 raise TypeError(f"{type(self)} indices must be integers, not '{type(index)}'")
 
     @overload
-    def _check_index_inclusive(self, index: int, *, int_only: bool = False) -> int | NoReturn:
+    def _check_index_inclusive(self, index: int, *, int_only: bool = False) -> int:
         ...
 
     @overload
-    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
+    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range:
         ...
 
     @overload
@@ -51,7 +51,7 @@ class _CommonMethods(Collection, ABC):
                 return self._check_index(index, int_only=int_only)
 
 
-class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
+class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
     """A circular queue, emulated in python."""
 
     def __new__(cls, maxlen: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
