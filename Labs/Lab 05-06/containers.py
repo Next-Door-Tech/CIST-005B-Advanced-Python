@@ -249,7 +249,7 @@ class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
         match self._check_index(index):
             case int(index):
                 return self._array[self._array_index(index)]
-            case range(indices):
+            case range() as indices:
                 return [self._array[self._array_index(i)] for i in indices]
 
     @overload
@@ -264,7 +264,7 @@ class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
         match self._check_index(index):
             case int(index):
                 self._array[self._array_index(index)] = value
-            case range(indices):
+            case range() as indices:
                 start, stop, step = index.indices(len(self))
                 if step == 1:
                     tail = self[stop:]
@@ -321,7 +321,7 @@ class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
                     self._len -= 1
                     return
 
-            case range(indices):
+            case range() as indices:
                 if len(indices) == 0:
                     return
 
