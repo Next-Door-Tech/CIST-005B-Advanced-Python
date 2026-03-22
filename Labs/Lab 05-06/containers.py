@@ -837,5 +837,5 @@ class LinkedQueue[T](LinkedList[T]):
     def enqueue(self, item):
         self.append(item)
 
-    def dequeue(self, item):
+    def dequeue(self):
         self.pop(0)
