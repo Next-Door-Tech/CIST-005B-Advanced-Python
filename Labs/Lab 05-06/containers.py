@@ -29,18 +29,18 @@ class _CommonMethods(Collection, ABC):
 class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
     """A circular queue, emulated in python."""
 
-    def __new__(cls, max_len: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
-        match max_len:
-            case int(max_len) if max_len >= 0:
+    def __new__(cls, maxlen: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
+        match maxlen:
+            case int(maxlen) if maxlen >= 0:
                 return super().__new__(cls)
             case int():
-                raise ValueError(f"{cls.__name__} parameter max_len cannot be negative")
+                raise ValueError(f"{cls.__name__} parameter maxlen cannot be negative")
             case _:
-                raise TypeError(f"{cls.__name__} parameter max_len must be an integer, not '{type(max_len)}'")
+                raise TypeError(f"{cls.__name__} parameter maxlen must be an integer, not '{type(maxlen)}'")
 
-    def __init__(self, max_len: int = 0, iterable: Iterable[T] = None):
+    def __init__(self, maxlen: int = 0, iterable: Iterable[T] = None):
 
-        self._array: list[T] = [None] * max_len
+        self._array: list[T] = [None] * maxlen
         self._len: int = 0
         self._offset: int = 0
 
@@ -56,35 +56,35 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
 
     @_len.setter
     def _len(self, value: int) -> None:
-        self.__len = min(value, self.max_len)
+        self.__len = min(value, self.maxlen)
 
     def _array_index(self, index: int) -> int:
         """Normalizes an index into self._array based on self._offset."""
-        if self.max_len != 0:
-            return self._offset + index % self.max_len
+        if self.maxlen != 0:
+            return self._offset + index % self.maxlen
         else:
-            raise IndexError(f"{type(self)} has max_len of 0; index out of range")
+            raise IndexError(f"{type(self)} has maxlen of 0; index out of range")
 
     @property
-    def max_len(self) -> int:
+    def maxlen(self) -> int:
         return len(self._array)
 
-    @max_len.setter
-    def max_len(self, value: int) -> None:
+    @maxlen.setter
+    def maxlen(self, value: int) -> None:
         """Resize the cirque to the specified size.
 
         The final size of the array must not be smaller than the current number of items."""
         try:
             value = int(value)
         except ValueError:
-            raise TypeError(f"{self.__class__.__name__} property max_len must be an integer, not '{type(value)}'")
+            raise TypeError(f"{self.__class__.__name__} property maxlen must be an integer, not '{type(value)}'")
 
         if value < 0:
-            raise ValueError(f"{self.__class__.__name__} property max_len cannot be negative")
+            raise ValueError(f"{self.__class__.__name__} property maxlen cannot be negative")
         if value < len(self):
             raise ValueError(f"shortening {self.__class__.__name__} from {len(self)} to {value} would delete items")
 
-        delta = value - self.max_len
+        delta = value - self.maxlen
 
         if delta == 0:  # do nothing
             return
@@ -98,15 +98,15 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
 
         else:  # truncating
             delta *= -1
-            if self._offset + len(self) < self.max_len:
-                tail = min(delta, max(self.max_len - len(self) - self._offset, 0))
+            if self._offset + len(self) < self.maxlen:
+                tail = min(delta, max(self.maxlen - len(self) - self._offset, 0))
                 del self._array[-tail:]  # delete as many empty slots from the end as possible/needed
                 delta -= tail
             del self._array[self._offset - delta:self._offset]
             self._offset -= delta
 
     def full(self) -> bool:
-        return len(self) >= self.max_len
+        return len(self) >= self.maxlen
 
     @property
     def _offset(self) -> int:
@@ -116,13 +116,13 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
     @_offset.setter
     def _offset(self, value: int) -> None:
         """Allows naively setting _offset without checking if the new value would fall off the end of the array."""
-        if self.max_len != 0:
-            self.__offset = value % self.max_len
+        if self.maxlen != 0:
+            self.__offset = value % self.maxlen
         else:
             self.__offset = 0
 
     def _wraps(self) -> bool:
-        return self._offset + self._len > self.max_len
+        return self._offset + self._len > self.maxlen
 
     def append(self, value: T) -> None:
         """Insert value into the cirque after the current last element."""
@@ -345,7 +345,7 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
         return new
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(max_len={self.max_len}, [{", ".join(repr(i) for i in self)}])"
+        return f"{self.__class__.__name__}(maxlen={self.maxlen}, [{", ".join(repr(i) for i in self)}])"
 
 
 class Node[T](Iterable[T], Container[T]):
