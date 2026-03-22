@@ -746,7 +746,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods):
             case int():
                 return self.head.traverse(index % len(self)).value
 
-            case slice():
+            case range():
                 raise NotImplementedError  # TODO
 
     @overload
@@ -765,7 +765,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods):
             case int():
                 self.head.traverse(index % len(self)).value = value
 
-            case slice():
+            case range():
                 raise NotImplementedError  # TODO
 
     @overload
