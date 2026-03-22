@@ -1,8 +1,31 @@
 from typing import Self, overload
 from collections.abc import MutableSequence, Iterable, Reversible, Container
+from abc import ABC
 
 
-class cirque[T](MutableSequence[T]):  # noqa: N802
+class _CommonMethods(Collection, ABC):
+    def _check_index(self, index: int | slice, *, int_only: bool = False) -> int | range:
+        match index:
+            case int() if -len(self) <= index < len(self):
+                return index
+            case int():
+                raise IndexError(f"{type(self)} index out of range")
+            case slice() if not int_only:
+                return range(len(self))[index]
+            case _ if not int_only:
+                raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
+            case _:
+                raise TypeError(f"{type(self)} indices must be integers, not '{type(index)}'")
+
+    def _check_index_inclusive(self, index: int | slice, *, int_only: bool = False) -> int | range:
+        match index:
+            case int() if -len(self) <= index <= len(self):
+                return index
+            case _:
+                return self._check_index(index, int_only=int_only)
+
+
+class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
     """A circular queue, emulated in python."""
 
     def __new__(cls, max_len: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
@@ -269,7 +292,7 @@ class Sentinel(Node):
     @head.deleter
     def head(self):
         if self.head is not self:
-            self.head = self.head.traverse(1)   # call head.setter; performs checks
+            self.head = self.head.traverse(1)  # call head.setter; performs checks
         else:
             raise IndexError(f"{type(self)} already points to an empty chain")
 
@@ -311,7 +334,7 @@ class Sentinel(Node):
         return f"<{self.__class__.__qualname__}>"
 
 
-class LinkedList[T](MutableSequence[T]):
+class LinkedList[T](MutableSequence[T], _CommonMethods):
     __slots__ = ('_sentinel', '_count', "__weakref__")
 
     _sentinel: Sentinel
@@ -502,28 +525,6 @@ class LinkedList[T](MutableSequence[T]):
             cursor.forward = self.head
             self.head = cursor
             cursor = fwd
-
-    def _check_index(self, index: int | slice) -> int | slice:
-        match index:
-            case slice():
-                return index
-            case int() if -len(self) <= index < len(self):
-                return index
-            case int():
-                raise IndexError(f"{type(self)} index out of range")
-            case _:
-                raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
-
-    def _normalize_index_inclusive(self, index: int | slice) -> int | slice:
-        match index:
-            case slice():
-                return index
-            case int() if -len(self) <= index <= len(self):
-                return index
-            case int():
-                raise IndexError(f"{type(self)} index out of range")
-            case _:
-                raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
 
     def __len__(self) -> int:
         return self._count
