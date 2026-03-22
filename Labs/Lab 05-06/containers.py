@@ -202,8 +202,11 @@ class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
                 self._array[self._array_index(i + 1)] = self._array[self._array_index(i)]
             self._len += 1
 
-    def index(self, x: T, start: int = 0, stop: int = None, /) -> int:
-        return super().index(x, start, stop)
+    def index(self, value: T, start: int = 0, stop: int = None, /) -> int:
+        return super().index(value, start, stop)
+
+    def remove(self, value: T) -> None:
+        del self[self.index(value)]
 
     def pop(self, index: int = -1) -> T:
         value = self[index]
