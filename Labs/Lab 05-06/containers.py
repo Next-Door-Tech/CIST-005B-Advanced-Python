@@ -105,6 +105,7 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
             del self._array[self._offset - delta:self._offset]
             self._offset -= delta
 
+    @property
     def full(self) -> bool:
         return len(self) >= self.maxlen
 
@@ -121,6 +122,7 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
         else:
             self.__offset = 0
 
+    @property
     def _wraps(self) -> bool:
         return self._offset + self._len > self.maxlen
 
@@ -166,7 +168,7 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
         elif index == self._len:
             self.append(value)
         elif index <= self._len // 2:  # shifting self[:index] left is fastest
-            for i in range(int(self.full()), index):  # last becomes first if full; do not overwrite last
+            for i in range(int(self.full), index):  # last becomes first if full; do not overwrite last
                 self._array[self._array_index(i - 1)] = self._array[self._array_index(i)]
             self._offset -= 1
             self._len += 1
@@ -195,7 +197,7 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
 
         if count == 0:
             return
-        elif self.full():
+        elif self.full:
             self._offset += count
         elif count < len(self) // 2:  # rotate right
             for _ in range(count):
