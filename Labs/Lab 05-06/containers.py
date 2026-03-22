@@ -1,4 +1,5 @@
 from typing import Self, overload
+from collections import deque
 from collections.abc import MutableSequence, Iterable, Container, Collection
 from copy import copy, deepcopy
 from abc import ABC
@@ -26,7 +27,7 @@ class _CommonMethods(Collection, ABC):
                 return self._check_index(index, int_only=int_only)
 
 
-class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
+class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
     """A circular queue, emulated in python."""
 
     def __new__(cls, maxlen: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
