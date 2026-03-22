@@ -1,5 +1,6 @@
 from typing import Self, overload
-from collections.abc import MutableSequence, Iterable, Reversible, Container
+from collections.abc import MutableSequence, Iterable, Container, Collection
+from copy import copy, deepcopy
 from abc import ABC
 
 
@@ -30,7 +31,7 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
 
     def __new__(cls, max_len: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
         match max_len:
-            case int() if max_len >= 0:
+            case int(max_len) if max_len >= 0:
                 return super().__new__(cls)
             case int():
                 raise ValueError(f"{cls.__name__} parameter max_len cannot be negative")
@@ -39,9 +40,9 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
 
     def __init__(self, max_len: int = 0, iterable: Iterable[T] = None):
 
-        self._max_len: int = max_len
-        self._len: int = 0
         self._array: list[T] = [None] * max_len
+        self._len: int = 0
+        self._offset: int = 0
 
         if iterable is not None:
             self.extend(iterable)
@@ -50,69 +51,163 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
         return self._len
 
     @property
-    def len(self) -> int:
-        return len(self)
+    def _len(self) -> int:
+        return self.__len
+
+    @_len.setter
+    def _len(self, value: int) -> None:
+        self.__len = min(value, self.max_len)
+
+    def _array_index(self, index: int) -> int:
+        """Normalizes an index into self._array based on self._offset."""
+        if self.max_len != 0:
+            return self._offset + index % self.max_len
+        else:
+            raise IndexError(f"{type(self)} has max_len of 0; index out of range")
 
     @property
     def max_len(self) -> int:
-        return self._max_len
+        return len(self._array)
 
     @max_len.setter
-    def max_len(self, max_len: int) -> None:
-        if not isinstance(max_len, int):
-            raise TypeError(f"{self.__class__.__name__} parameter max_len must be an integer, not '{type(max_len)}'")
-        if max_len < 0:
-            raise ValueError(f"{self.__class__.__name__} parameter max_len cannot be negative")
+    def max_len(self, value: int) -> None:
+        """Resize the cirque to the specified size.
 
-        raise NotImplementedError  # TODO: have max_len dynamically resize the array, truncating if requested
+        The final size of the array must not be smaller than the current number of items."""
+        try:
+            value = int(value)
+        except ValueError:
+            raise TypeError(f"{self.__class__.__name__} property max_len must be an integer, not '{type(value)}'")
 
-    def append(self, x, /) -> None:
-        raise NotImplementedError  # TODO
+        if value < 0:
+            raise ValueError(f"{self.__class__.__name__} property max_len cannot be negative")
+        if value < len(self):
+            raise ValueError(f"shortening {self.__class__.__name__} from {len(self)} to {value} would delete items")
+
+        delta = value - self.max_len
+
+        if delta == 0:  # do nothing
+            return
+
+        elif delta > 0:  # extending
+            if not self._wraps:
+                self._array += [None] * delta  # quick extend
+            else:
+                self._array[self._offset:self._offset] = [None] * delta
+                self._offset += delta
+
+        else:  # truncating
+            delta *= -1
+            if self._offset + len(self) < self.max_len:
+                tail = min(delta, max(self.max_len - len(self) - self._offset, 0))
+                del self._array[-tail:]  # delete as many empty slots from the end as possible/needed
+                delta -= tail
+            del self._array[self._offset - delta:self._offset]
+            self._offset -= delta
+
+    def full(self) -> bool:
+        return len(self) >= self.max_len
+
+    @property
+    def _offset(self) -> int:
+        """The offset of the first filled data element in self._array."""
+        return self.__offset
+
+    @_offset.setter
+    def _offset(self, value: int) -> None:
+        """Allows naively setting _offset without checking if the new value would fall off the end of the array."""
+        if self.max_len != 0:
+            self.__offset = value % self.max_len
+        else:
+            self.__offset = 0
+
+    def _wraps(self) -> bool:
+        return self._offset + self._len > self.max_len
+
+    def append(self, value: T) -> None:
+        """Insert value into the cirque after the current last element."""
+        self._array[self._array_index(self._len)] = value
         self._len += 1
 
-    def appendleft(self, x, /) -> None:
-        raise NotImplementedError  # TODO
+    def prepend(self, value: T) -> None:
+        """Insert value into the cirque before the current first element."""
+        self._array[self._array_index(-1)] = value
+        self._offset -= 1
         self._len += 1
 
-    def copy(self) -> Self:
-        raise NotImplementedError  # TODO
+    appendleft = prepend  # alias to match naming convention of collections.deque
 
-    def count(self, x, /) -> int:
-        raise NotImplementedError  # TODO
+    def count(self, value: T) -> int:
+        return super().count(value)
 
-    def extend(self, iterable, /) -> None:
-        raise NotImplementedError  # TODO
+    def extend(self, iterable: Iterable[T]) -> None:
+        """Extends the cirque by appending each value in iterable."""
+        if iterable is self or iterable is self._array:
+            iterable = list(iterable)
+        for value in iterable:
+            self.append(value)
 
-    def extendleft(self, iterable, /) -> None:
-        raise NotImplementedError  # TODO
+    def extendleft(self, iterable: Iterable[T]) -> None:
+        """Extends the cirque by prepending each value in iterable.
 
-    def insert(self, i, x, /) -> None:
-        raise NotImplementedError  # TODO
+        Note that this effectively reverses the order of items in iterable.
+        If this behavior is unwanted, use `cirque[:0] = list(iterable)` instead."""
+        if iterable is self or iterable is self._array:
+            iterable = list(iterable)
+        for value in iterable:
+            self.prepend(value)
+
+    def insert(self, index: int, value: T) -> None:
+        """Inserts value into self before index, as if by shifting self[index:] forward by 1 if necessary."""
+        index = self._check_index_inclusive(index, int_only=True)
+
+        if index == 0:
+            self.prepend(value)
+        elif index == self._len:
+            self.append(value)
+        elif index <= self._len // 2:  # shifting self[:index] left is fastest
+            for i in range(int(self.full()), index):  # last becomes first if full; do not overwrite last
+                self._array[self._array_index(i - 1)] = self._array[self._array_index(i)]
+            self._offset -= 1
+            self._len += 1
+        else:  # shifting self[index:] right is fastest
+            for i in reversed(range(index, len(self))):
+                self._array[self._array_index(i + 1)] = self._array[self._array_index(i)]
+            self._len += 1
 
     def index(self, x: T, start: int = 0, stop: int = None, /) -> int:
-        ...
-        # return super().index(x, start, stop)
+        return super().index(x, start, stop)
 
     def pop(self, index: int = -1) -> T:
-        pass
-        # return super().pop()
+        value = self[index]
+        del self[index]
+        return value
 
-    def popleft(self) -> T:
-        pass
-        # return super().popleft()
+    def popleft(self, index: int = 0) -> T:
+        return self.pop(index)
 
-    def remove(self, value, /) -> None:
-        pass
-        # super().remove(value)
+    def rotate(self, count: int = 1) -> None:
+        """Performs a rotation of the members of self."""
+        if len(self) == 0:
+            return  # rotating [] does nothing and x % 0 throws error
 
-    def rotate(self, n=1, /) -> None:
-        pass
-        # super().rotate(n)
+        count %= len(self)
 
-    def __lshift__(self, n) -> None:
+        if count == 0:
+            return
+        elif self.full():
+            self._offset += count
+        elif count < len(self) // 2:  # rotate right
+            for _ in range(count):
+                self.prepend(self.pop(-1))  # move last item to before first
+        else:  # rotate left
+            for _ in range(len(self) - count):
+                self.append(self.pop(0))  # move first item after last index
+
+    def __lshift__(self, n: int) -> None:
         self.rotate(-n)
 
-    def __rshift__(self, n) -> None:
+    def __rshift__(self, n: int) -> None:
         self.rotate(n)
 
     @overload
@@ -123,8 +218,12 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
     def __getitem__(self, index: slice) -> Self:
         ...
 
-    def __getitem__(self, index) -> T | Self:
-        ...  # FIXME
+    def __getitem__(self, index: int | slice) -> T | list[T]:
+        match self._check_index(index):
+            case int(index):
+                return self._array[self._array_index(index)]
+            case range(indices):
+                return [self._array[self._array_index(i)] for i in indices]
 
     @overload
     def __setitem__(self, index: int, value: T) -> None:
@@ -134,8 +233,29 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
     def __setitem__(self, index: slice, value: Iterable[T]) -> None:
         ...
 
-    def __setitem__(self, index, value) -> None:
-        ...  # FIXME
+    def __setitem__(self, index: int | slice, value: T | Iterable[T]) -> None:
+        match self._check_index(index):
+            case int(index):
+                self._array[self._array_index(index)] = value
+            case range(indices):
+                start, stop, step = index.indices(len(self))
+                if step == 1:
+                    tail = self[stop:]
+                    del self[start:]
+                    self.extend(value)
+                    self.extend(tail)
+
+                else:  # extended slice, check that length of slice and iterable are the same
+                    if not hasattr(value, '__len__') or value is self or value is self._array:
+                        value = list(value)
+
+                    if len(value) != len(indices):
+                        raise ValueError(
+                            f"attempt to assign sequence of size {len(value)} to extended slice of size {len(indices)}"
+                        )
+                    else:
+                        for i, v in zip(indices, value):
+                            self._array[self._array_index(i)] = v
 
     @overload
     def __delitem__(self, index: int) -> None:
@@ -146,7 +266,86 @@ class cirque[T](MutableSequence[T], _CommonMethods):  # noqa: N802
         ...
 
     def __delitem__(self, index) -> None:
-        ...  # FIXME
+        match self._check_index(index):
+            case int(index):
+                if index == 0:  # first item
+                    self._array[self._offset] = None
+                    self._offset += 1
+                    self._len -= 1
+                    return
+
+                elif index == len(self) - 1:  # last item
+                    self._array[self._array_index(index)] = None
+                    self._len -= 1
+                    return
+
+                elif index <= self._len // 2:  # shifting self[1:index] right is fastest
+                    for i in reversed(range(1, index)):
+                        self._array[self._array_index(i)] = self._array[self._array_index(i - 1)]
+                    self._array[self._offset] = None
+                    self._offset += 1
+                    self._len -= 1
+                    return
+
+                else:  # shifting self[index+1:] left is fastest
+                    for i in range(index, len(self) - 1):
+                        self._array[self._array_index(i)] = self._array[self._array_index(i + 1)]
+                    self._array[self._array_index(len(self) - 1)] = None
+                    self._len -= 1
+                    return
+
+            case range(indices):
+                if len(indices) == 0:
+                    return
+
+                elif len(indices) == len(self):
+                    for i in range(len(self)):
+                        self._array[self._array_index(i)] = None
+                    self._len = 0
+                    return
+
+                elif abs(indices.step) == 1:  # slice is contiguous
+                    count = len(indices)
+                    if min(indices) < len(self) - (max(indices) + 1):  # head section is shortest
+                        for i in reversed(range(min(indices))):
+                            self._array[self._array_index(i + count)] = self._array[self._array_index(i)]
+                        for i in range(count):
+                            self._array[self._array_index(i)] = None
+                        self._offset += count
+                        self._len -= count
+
+                    else:  # tail section is shortest
+                        for i in range(max(indices) + 1, len(self)):
+                            self._array[self._array_index(i - count)] = self._array[self._array_index(i)]
+                        for i in range(count):
+                            self._array[len(self) - count + i] = None
+                        self._len -= count
+
+                else:
+                    for i in indices:
+                        del self[i]  # TODO optimize to minimize number of array shifts
+
+    def copy(self) -> Self:
+        return copy(self)
+
+    def __copy__(self) -> Self:
+        new = self.__class__()
+        new._array = copy(self._array)
+        new._len = self._len
+        new._offset = self._offset
+
+        return new
+
+    def __deepcopy__(self, memo) -> Self:
+        new = self.__class__(0)
+        new._array = deepcopy(self._array, memo)
+        new._len = self._len
+        new._offset = self._offset
+
+        return new
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}(max_len={self.max_len}, [{", ".join(repr(i) for i in self)}])"
 
 
 class Node[T](Iterable[T], Container[T]):
