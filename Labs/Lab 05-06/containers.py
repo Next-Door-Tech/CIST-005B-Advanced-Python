@@ -255,6 +255,8 @@ class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
             case range() as indices:
                 return [self._array[self._array_index(i)] for i in indices]
 
+        raise RuntimeError("This point should be unreachable.")
+
     @overload
     def __setitem__(self, index: int, value: T) -> None:
         ...
