@@ -1,4 +1,4 @@
-from typing import Self, overload
+from typing import Self, overload, NoReturn
 from collections import deque
 from collections.abc import MutableSequence, Iterable, Container, Collection
 from copy import copy, deepcopy
@@ -6,6 +6,18 @@ from abc import ABC
 
 
 class _CommonMethods(Collection, ABC):
+    @overload
+    def _check_index(self, index: int, *, int_only: bool = False) -> int | NoReturn:
+        ...
+
+    @overload
+    def _check_index(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
+        ...
+
+    @overload
+    def _check_index(self, index: slice, *, int_only: bool = True) -> NoReturn:
+        ...
+
     def _check_index(self, index: int | slice, *, int_only: bool = False) -> int | range:
         match index:
             case int() if -len(self) <= index < len(self):
@@ -18,6 +30,18 @@ class _CommonMethods(Collection, ABC):
                 raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
             case _:
                 raise TypeError(f"{type(self)} indices must be integers, not '{type(index)}'")
+
+    @overload
+    def _check_index_inclusive(self, index: int, *, int_only: bool = False) -> int | NoReturn:
+        ...
+
+    @overload
+    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
+        ...
+
+    @overload
+    def _check_index_inclusive(self, index: slice, *, int_only: bool = True) -> NoReturn:
+        ...
 
     def _check_index_inclusive(self, index: int | slice, *, int_only: bool = False) -> int | range:
         match index:
@@ -41,7 +65,7 @@ class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
 
     def __init__(self, maxlen: int = 0, iterable: Iterable[T] = None):
 
-        self._array: list[T] = [None] * maxlen
+        self._array: list[T | None] = [None] * maxlen
         self._len: int = 0
         self._offset: int = 0
 
@@ -218,7 +242,7 @@ class cirque[T](MutableSequence[T], _CommonMethods, deque[T]):  # noqa: N802
         ...
 
     @overload
-    def __getitem__(self, index: slice) -> Self:
+    def __getitem__(self, index: slice) -> list[T]:
         ...
 
     def __getitem__(self, index: int | slice) -> T | list[T]:
