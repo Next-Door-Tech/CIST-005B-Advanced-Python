@@ -360,6 +360,10 @@ class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
     def copy(self) -> Self:
         return copy(self)
 
+    def __iter__(self):  # FIXME not safe if cirque is mutated during iteration
+        for i in range(len(self)):
+            yield self[i]
+
     def __copy__(self) -> Self:
         new = self.__class__()
         new._array = copy(self._array)
