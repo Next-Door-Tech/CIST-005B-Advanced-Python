@@ -9,7 +9,7 @@ from identityset import IdentitySet
 from formatspec import FormatSpec
 import sys
 
-if sys.version_info < (15, 0):  # frozendict is a built-in type on python 15
+if sys.version_info < (3, 15, 0):  # frozendict is a built-in type on python 3.15, else install frozendict from PyPI
     from frozendict import frozendict
 
 __all__ = ["Card", "Deck", "Shoe", "Hand"]
