@@ -2,11 +2,10 @@ import unicodedata as ucd
 from enum import Enum
 from itertools import product, chain
 from random import shuffle
-from typing import overload, Self, TypeVar, Protocol
-from collections import deque
-from collections.abc import MutableSequence, MutableSet, Iterable, Callable
-from identityset import IdentitySet
-from formatspec import FormatSpec
+from typing import overload, Self, Protocol, Collection
+from collections.abc import MutableSequence, Iterable, Callable
+from common_lib.containers import cirque, LinkedStack
+from common_lib.formatspec import FormatSpec
 import sys
 
 if sys.version_info < (3, 15, 0):  # frozendict is a built-in type on python 3.15, else install frozendict from PyPI
@@ -435,14 +434,14 @@ class Deck(MutableSequence[Card]):
         """
         super().__init__()
 
-        # Allow subclasses to define their own deque sizes and deck orders
+        # Allow subclasses to define their own deque/cirque sizes and deck orders
         if not hasattr(self, '_draw_pile'):
-            self._draw_pile = deque[Card](maxlen=52)
+            self._draw_pile = cirque[Card](maxlen=52)
         if len(self._draw_pile) == 0:
             self._draw_pile.extend(Card(kind) for kind in self._new_deck_order)
 
         if not hasattr(self, '_discard_pile'):
-            self._discard_pile = deque[Card](maxlen=self._draw_pile.maxlen)
+            self._discard_pile = cirque[Card](maxlen=self._draw_pile.maxlen)
 
         self._owned_cards = {kind: [] for kind in Card.Kinds}
         for card in self._draw_pile:
@@ -556,7 +555,7 @@ class Deck(MutableSequence[Card]):
     def __len__(self):
         return len(self._owned_cards)
 
-    def _o_n_sort(self, pile: deque, key: None = None, reverse: bool = False):  # TODO implement key and reverse
+    def _o_n_sort(self, pile: cirque, key: None = None, reverse: bool = False):  # TODO implement key and reverse
 
         counter = {}
         for card in pile:
@@ -570,7 +569,7 @@ class Shoe(Deck):
 
     def __init__(self, num_decks: int, *, sort_key: Callable[[Card, Card], bool] = None,
                  sort_algorithm: SortAlgorithm[Card] = None):
-        self._draw_pile = deque[Card](maxlen=52 * num_decks)
+        self._draw_pile = cirque[Card](maxlen=52 * num_decks)
         for _ in range(num_decks):
             self._deck.extend(Card(kind) for kind in self._new_deck_order)
 
