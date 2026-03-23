@@ -11,7 +11,7 @@ import sys
 if sys.version_info < (3, 15, 0):  # frozendict is a built-in type on python 3.15, else install frozendict from PyPI
     from frozendict import frozendict
 
-__all__ = ["Card", "Deck", "Shoe", "Hand"]
+__all__ = ["Rank", "Suit", "Color", "Kind", "Card", "Deck", "Shoe", "Hand"]
 
 _non_emoji = ucd.lookup('VS15')  # Unicode modifier preventing use of emoji versions of characters
 
@@ -484,6 +484,9 @@ class Deck(MutableSequence[Card]):
         self._discard_pile.clear()
         self.sort()
 
+    def draw(self) -> Card:
+        return self._draw_pile.pop()
+
     def shuffle_draw(self):
         shuffle(self._draw_pile)
 
@@ -576,23 +579,34 @@ class Shoe(Deck):
         super().__init__(sort_key=sort_key, sort_algorithm=sort_algorithm)
 
 
-class Hand(MutableSequence[Card]):
-    """A hand of cards. Must be a subset of a Deck or Shoe."""
+class Hand(Collection[Card]):
+    """A hand of cards. Must be linked to a parent Deck or Shoe."""
 
-    def __init__(self):
-        pass
+    def __init__(self, parent: Deck):
+        self.parent: Deck = parent
+        self.cards: LinkedStack[Card] = LinkedStack()  # realistically a list is perfectly adequate here
+        # FIXME in production
 
-    def add(self, value):
-        pass
+    def draw(self, count: int = 1, face_up: bool = None):
+        for _ in range(count):
+            self.cards.append(self.parent.draw())
+            if face_up is not None:
+                self.cards[-1].face_up = face_up
 
     def discard(self, value):
-        pass
+        self.parent._discard_pile.append(
+            self.cards.pop(self.cards.index(value))
+        )
 
-    def __contains__(self, x):
-        pass
+    def discard_all(self):
+        for c in self.cards:
+            self.discard(c)
+
+    def __contains__(self, card_type):
+        return any(card.kind is card_type or card == card_type for card in self.cards)
 
     def __len__(self):
-        pass
+        return len(self.cards)
 
     def __iter__(self):
-        pass
+        yield from self.cards
