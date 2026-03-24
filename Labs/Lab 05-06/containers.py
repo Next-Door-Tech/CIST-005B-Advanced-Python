@@ -441,7 +441,7 @@ class Node[T](Iterable[T], Container[T]):
     def __iter__(self):
         yield self
         if self.forward is None:
-            raise StopIteration
+            return
         yield from self.forward
 
     def __contains__(self, item: T) -> bool:
@@ -560,10 +560,10 @@ class Sentinel(Node):
             raise IndexError(f"{type(self)} reached with {count} indices remaining.")
 
     def __iter__(self):
-        raise StopIteration
+        yield from ()
 
     def __reversed__(self):
-        raise StopIteration
+        yield from ()
 
     def __repr__(self):
         return f"<{self.__class__.__qualname__}>"
