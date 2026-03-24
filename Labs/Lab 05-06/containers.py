@@ -822,7 +822,8 @@ class LinkedList[T](MutableSequence[T], _CommonMethods):
                 raise NotImplementedError  # TODO
 
     def __iter__(self):
-        yield from self.head
+        for node in self.head:
+            yield node.value
 
     def __repr__(self):
         return f"<{type(self)}: {self.head!r}>"
