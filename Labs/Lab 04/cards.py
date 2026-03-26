@@ -574,7 +574,7 @@ class Shoe(Deck):
                  sort_algorithm: SortAlgorithm[Card] = None):
         self._draw_pile = cirque[Card](maxlen=52 * num_decks)
         for _ in range(num_decks):
-            self._deck.extend(Card(kind) for kind in self._new_deck_order)
+            self._draw_pile.extend(Card(kind) for kind in self._new_deck_order)
 
         super().__init__(sort_key=sort_key, sort_algorithm=sort_algorithm)
 
