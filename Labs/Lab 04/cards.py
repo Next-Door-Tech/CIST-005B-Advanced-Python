@@ -321,8 +321,8 @@ class Card:
         """Whether the card is face down."""
         return not self._face_up
 
-    @face_up.setter
-    def face_up(self, value: bool) -> None:
+    @face_down.setter
+    def face_down(self, value: bool) -> None:
         self._face_up = not value
 
     def flip(self) -> None:
