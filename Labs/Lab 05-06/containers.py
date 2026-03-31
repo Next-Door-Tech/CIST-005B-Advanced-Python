@@ -439,10 +439,9 @@ class Node[T](Iterable[T], Container[T]):
         return head
 
     def __iter__(self):
-        yield self
-        if self.forward is None:
-            return
-        yield from self.forward
+        yield self.value
+        if self.forward is not None:
+            yield from self.forward
 
     def __contains__(self, item: T) -> bool:
         return self.value is item or self.value == item
@@ -822,8 +821,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods):
                 raise NotImplementedError  # TODO
 
     def __iter__(self):
-        for node in self.head:
-            yield node.value
+        yield from self.head
 
     def __repr__(self):
         return f"<{type(self)}: {self.head!r}>"
