@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class SliceInfo:
     """Prints information about the current slice.
 
@@ -27,3 +30,8 @@ class SliceInfo:
               f"index list: [{", ".join(str(i) for i in range(length)[self.s])}]",
               f"index count: {len(range(length)[self.s])}",
               sep="\n\t", end="\n\n")
+
+
+class SubscriptInfo:
+    def __class_getitem__(cls, item) -> Any:
+        return item
