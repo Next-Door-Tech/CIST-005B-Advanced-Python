@@ -121,7 +121,7 @@ class HashTable[KT: Hashable, VT](MutableMapping[KT, VT]):
         maxlen = max(maxlen, len(self), 1)  # disallow setting maxlen to 0 or shrinking below current size
         maxlen = 4 << ceil(log2(maxlen))  # round up to next power of 2 at least 4 times greater than specified
 
-        if maxlen == len(self):
+        if maxlen == self._maxlen:
             return
         else:
             buffer = [(key, self[key]) for key in self]
