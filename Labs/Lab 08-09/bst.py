@@ -7,37 +7,6 @@ class SimpleBST[T]:
             self.left: Self = left
             self.right: Self = right
 
-        def search(self, value: T) -> T:
-            if value == self.value:
-                return self.value
-            elif value < self.value:
-                if self.left is not None:
-                    return self.left.search(value)
-                else:
-                    raise KeyError
-            else:
-                if self.right is not None:
-                    return self.right.search(value)
-                else:
-                    raise KeyError
-
-        def insert(self, value: T) -> None:
-            if value < self.value:
-                if self.left is not None:
-                    self.left.insert(value)
-                else:
-                    self.left = self.__class__(value)
-            else:
-                if self.right is not None:
-                    self.right.insert(value)
-                else:
-                    self.right = self.__class__(value)
-
-        # def delete(self, value: T) -> None:
-        #     if value == self.value:
-        #         if self.left is None:
-        #             self = self.right
-
     root: Node | None
 
     def __init__(self):
@@ -119,10 +88,6 @@ class SimpleBST[T]:
             if nxt.value == value:
                 if nxt.right is None:
                     nxt.ref = nxt.left
-                    return
-
-                elif nxt.left is None:
-                    nxt.ref = nxt.right
                     return
 
                 else:
