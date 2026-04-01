@@ -99,6 +99,13 @@ class BST[KT, VT](MutableMapping[KT, VT]):
             if self.right is not None:
                 yield from self.right
 
+        def __reversed__(self) -> Generator[VT, None, None]:
+            if self.right is not None:
+                yield from reversed(self.right)
+            yield self.key
+            if self.left is not None:
+                yield from reversed(self.left)
+
     root: Optional[Node]
 
     def __init__(self, root: Node = None) -> None:
@@ -137,6 +144,10 @@ class BST[KT, VT](MutableMapping[KT, VT]):
     def __iter__(self) -> Generator[VT, None, None]:
         if self.root is not None:
             yield from self.root
+
+    def __reversed__(self) -> Generator[VT, None, None]:
+        if self.root is not None:
+            yield from reversed(self.root)
 
 
 class SimpleBST[T]:
