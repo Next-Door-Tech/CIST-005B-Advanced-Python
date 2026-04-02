@@ -1,4 +1,4 @@
-from typing import Self, overload, NoReturn
+from typing import Self, NoReturn, Literal, overload
 from collections import deque
 from collections.abc import MutableSequence, Iterable, Container, Collection, Generator
 from copy import copy, deepcopy
@@ -11,11 +11,15 @@ class _CommonMethods[T](Collection[T], ABC):
         ...
 
     @overload
-    def _check_index(self, index: slice, *, int_only: bool = False) -> range:
+    def _check_index(self, index: slice, *, int_only: Literal[False]) -> range:
         ...
 
     @overload
-    def _check_index(self, index: slice, *, int_only: bool = True) -> NoReturn:
+    def _check_index(self, index: slice, *, int_only: Literal[True]) -> NoReturn:
+        ...
+
+    @overload
+    def _check_index(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
         ...
 
     def _check_index(self, index: int | slice, *, int_only: bool = False) -> int | range:
@@ -24,23 +28,27 @@ class _CommonMethods[T](Collection[T], ABC):
                 return index
             case int():
                 raise IndexError(f"{type(self)} index out of range")
-            case slice() if not int_only:
-                return range(len(self))[index]
-            case _ if not int_only:
-                raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
-            case _:
+            case _ if int_only:
                 raise TypeError(f"{type(self)} indices must be integers, not '{type(index)}'")
+            case slice():
+                return range(len(self))[index]
+            case _:
+                raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
 
     @overload
     def _check_index_inclusive(self, index: int, *, int_only: bool = False) -> int:
         ...
 
     @overload
-    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range:
+    def _check_index_inclusive(self, index: slice, *, int_only: Literal[False]) -> range:
         ...
 
     @overload
-    def _check_index_inclusive(self, index: slice, *, int_only: bool = True) -> NoReturn:
+    def _check_index_inclusive(self, index: slice, *, int_only: Literal[True]) -> NoReturn:
+        ...
+
+    @overload
+    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
         ...
 
     def _check_index_inclusive(self, index: int | slice, *, int_only: bool = False) -> int | range:
