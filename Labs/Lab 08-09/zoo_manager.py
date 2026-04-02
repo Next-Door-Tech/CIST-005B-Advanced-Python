@@ -42,18 +42,18 @@ def gen_animals() -> Generator[Animal, None, None]:
         yield Animal(name, choice(species), randint(1, 10))
 
 
-class CarePriorityQueue(BST[int, list[Animal]]):
+class CarePriorityQueue(BST[int, LinkedQueue[Animal]]):
     def __init__(self) -> None:
         super().__init__()
 
         for level in range(1, 10 + 1):
-            self[level] = list()
+            self[level] = LinkedQueue()
 
     def insert_animal(self, animal: Animal) -> None:
         if animal in self[animal.care_level]:
             pass
         else:
-            self[animal.care_level].append(animal)
+            self[animal.care_level].push(animal)
 
     def remove_animal(self, animal: Animal) -> None:
         try:
