@@ -92,14 +92,14 @@ class BST[KT, VT](MutableMapping[KT, VT]):
                 _len += len(self.right)
             return _len
 
-        def __iter__(self) -> Generator[VT, None, None]:
+        def __iter__(self) -> Generator[KT, None, None]:
             if self.left is not None:
                 yield from self.left
             yield self.key
             if self.right is not None:
                 yield from self.right
 
-        def __reversed__(self) -> Generator[VT, None, None]:
+        def __reversed__(self) -> Generator[KT, None, None]:
             if self.right is not None:
                 yield from reversed(self.right)
             yield self.key
@@ -141,11 +141,11 @@ class BST[KT, VT](MutableMapping[KT, VT]):
         else:
             return 0
 
-    def __iter__(self) -> Generator[VT, None, None]:
+    def __iter__(self) -> Generator[KT, None, None]:
         if self.root is not None:
             yield from self.root
 
-    def __reversed__(self) -> Generator[VT, None, None]:
+    def __reversed__(self) -> Generator[KT, None, None]:
         if self.root is not None:
             yield from reversed(self.root)
 
