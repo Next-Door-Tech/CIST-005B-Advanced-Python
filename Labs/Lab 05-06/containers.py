@@ -1,6 +1,6 @@
 from typing import Self, overload, NoReturn
 from collections import deque
-from collections.abc import MutableSequence, Iterable, Container, Collection
+from collections.abc import MutableSequence, Iterable, Container, Collection, Generator
 from copy import copy, deepcopy
 from abc import ABC
 
@@ -360,7 +360,7 @@ class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
     def copy(self) -> Self:
         return copy(self)
 
-    def __iter__(self):  # FIXME not safe if cirque is mutated during iteration
+    def __iter__(self) -> Generator[T]:  # FIXME not safe if cirque is mutated during iteration
         for i in range(len(self)):
             yield self[i]
 
