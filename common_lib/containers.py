@@ -1,3 +1,4 @@
+from itertools import chain
 from typing import Self, NoReturn, Literal, Never, cast, overload
 from collections import deque
 from collections.abc import MutableSequence, Iterable, Collection, Generator
@@ -910,13 +911,13 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         raise ValueError
 
     def remove(self, value: T) -> None:
-        for node in self._head:
+        for node in chain([self._sentinel], self._head):
             if value in node.forward:
                 del node.forward
                 self._count -= 1
                 return
 
-        raise ValueError(f"value {value!r} not found")
+        raise ValueError(f"value '{value!r}' not found")
 
     def reverse(self) -> None:
         """
