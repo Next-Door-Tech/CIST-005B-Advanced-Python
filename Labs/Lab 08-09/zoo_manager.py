@@ -7,8 +7,6 @@ from common_lib.containers import LinkedQueue
 from common_lib.bst import BST
 from common_lib.hash_table import HashTable
 
-seed(0)  # deterministic random generation for debugging
-
 
 @dataclass
 class Animal:
@@ -166,8 +164,11 @@ class ZooManager:
             self.care_queue.insert_animal(animal)
 
 
-zoo = ZooManager(num_animals=10, basic_pens=4, advanced_pens=3, intensive_pens=2)
+for i in range(100):
+    seed(i)
 
-for day in range(10):
-    print(f"\n\nDay {day + 1}:")
-    zoo.next_day()
+    zoo = ZooManager(num_animals=10, basic_pens=4, advanced_pens=3, intensive_pens=2)
+
+    for day in range(10):
+        print(f"\n\nDay {day + 1}:")
+        zoo.next_day()
