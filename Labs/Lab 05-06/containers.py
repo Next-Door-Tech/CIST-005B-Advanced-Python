@@ -967,7 +967,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         match self._check_index(index):
             case 0:
                 del self._head
-                self._count -= 1
+                # no need to decrement _count as del self._head already does this
             case int():
                 del self._head.traverse(index - 1).forward
                 self._count -= 1
