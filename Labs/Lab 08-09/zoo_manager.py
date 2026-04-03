@@ -4,8 +4,8 @@ from collections.abc import Generator
 from itertools import islice
 
 from common_lib.containers import LinkedQueue
-from bst import BST
-from hash_table import HashTable
+from common_lib.bst import BST
+from common_lib.hash_table import HashTable
 
 seed(0)  # deterministic random generation for debugging
 
