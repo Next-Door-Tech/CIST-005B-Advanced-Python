@@ -19,6 +19,7 @@ class Animal:
 
 def gen_animals() -> Generator[Animal, None, None]:
     # AI generated default animal names and species names
+    # noinspection SpellCheckingInspection
     names = (
         "Leo", "Bella", "Max", "Luna", "Charlie", "Lucy", "Cooper", "Daisy", "Rocky", "Molly", "Buddy", "Sadie", "Toby",
         "Chloe", "Bear", "Lola", "Duke", "Zoe", "Oliver", "Ruby", "Jack", "Rosie", "Tucker", "Penny", "Jasper", "Lilly",
