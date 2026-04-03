@@ -910,6 +910,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         for node in self._head:
             if value in node.forward:
                 del node.forward
+                self._count -= 1
                 return
 
         raise ValueError(f"value {value!r} not found")
