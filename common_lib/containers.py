@@ -721,6 +721,9 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         def __iter__(self) -> Generator[Never]:
             yield from ()  # stop iterating when sentinel is reached
 
+        def __contains__(self, item: T) -> bool:
+            return False
+
         def __str__(self) -> str:
             return f"<{self.__class__.__name__}>"
 
