@@ -36,7 +36,7 @@ class _CommonMethods[T](Collection[T], ABC):
             case _ if int_only:
                 raise TypeError(f"{type(self)} indices must be integers, not '{type(index)}'")
             case slice():
-                return range(len(self))[index]
+                return self._slice_indices(index)
             case _:
                 raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
 
@@ -66,6 +66,9 @@ class _CommonMethods[T](Collection[T], ABC):
                 return index
             case _:
                 return self._check_index(index, int_only=int_only)
+
+    def _slice_indices(self, index: slice) -> range:
+        return range(len(self))[index]
 
 
 class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
