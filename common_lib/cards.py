@@ -2,7 +2,8 @@ import unicodedata as ucd
 from enum import Enum
 from itertools import product, chain
 from random import shuffle
-from typing import overload, Self, Protocol, Collection
+from types import NotImplementedType
+from typing import overload, Self, Protocol, Collection, Generator
 from collections.abc import MutableSequence, Iterable, Callable
 from .containers import cirque, LinkedStack
 from .formatspec import FormatSpec
@@ -17,28 +18,28 @@ _non_emoji = ucd.lookup('VS15')  # Unicode modifier preventing use of emoji vers
 
 
 class OrderedEnum(Enum):  # From python docs
-    def __ge__(self, other):
+    def __ge__(self, other) -> bool | NotImplementedType:
         return self.value >= other.value if self.__class__ is other.__class__ else NotImplemented
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool | NotImplementedType:
         return self.value > other.value if self.__class__ is other.__class__ else NotImplemented
 
-    def __le__(self, other):
+    def __le__(self, other) -> bool | NotImplementedType:
         return self.value <= other.value if self.__class__ is other.__class__ else NotImplemented
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool | NotImplementedType:
         return self.value < other.value if self.__class__ is other.__class__ else NotImplemented
 
 
 class Rank(OrderedEnum):
     """The rank of a card. {Ace, Two - Ten, Jack, Queen, King}"""
 
-    def __new__(cls, value, symbol: str, char_symbol: str = None, *aliases):
+    def __new__(cls, value, symbol: str, char_symbol: str = None, *aliases) -> Self:
         self = object.__new__(cls)
         self._value_ = value
         return self
 
-    def __init__(self, value, symbol: str, char_symbol: str = None, *aliases):
+    def __init__(self, value, symbol: str, char_symbol: str = None, *aliases) -> None:
         self._add_value_alias_(self.name)
 
         self.string = self.name.title()
@@ -71,22 +72,22 @@ class Rank(OrderedEnum):
     QUEEN = 12, 'Q'
     KING = 13, 'K'
 
-    def _add_value_alias_(self, value):
+    def _add_value_alias_(self, value) -> None:
         super()._add_value_alias_(value)
         if hasattr(value, "upper"):
             super()._add_value_alias_(value.upper())
 
     @classmethod
-    def _missing_(cls, value: str):
+    def _missing_(cls, value: str) -> Self | None:
         if hasattr(value, "upper") and value.upper() in cls:
             return cls(value.upper())
         else:
             return None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.string
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec) -> str:
         spec = FormatSpec(format_spec)
 
         match spec.type, spec.alt:
@@ -104,24 +105,24 @@ class Rank(OrderedEnum):
 class Color(Enum):
     """The color of a card. {Black, Red}"""
 
-    def __new__(cls, value, *aliases):
+    def __new__(cls, value, *aliases) -> Self:
         self = object.__new__(cls)
         self._value_ = value
         return self
 
-    def __init__(self, value, *aliases):
+    def __init__(self, value, *aliases) -> None:
         self._add_value_alias_(self.name)
 
         for alias in aliases:
             self._add_value_alias_(alias)
 
-    def _add_value_alias_(self, value):
+    def _add_value_alias_(self, value) -> None:
         super()._add_value_alias_(value)
         if hasattr(value, "upper"):
             super()._add_value_alias_(value.upper())
 
     @classmethod
-    def _missing_(cls, value: str):
+    def _missing_(cls, value: str) -> Self | None:
         if hasattr(value, "upper") and value.upper() in cls:
             return cls(value.upper())
 
@@ -142,12 +143,12 @@ class Color(Enum):
 class Suit(OrderedEnum):
     """The suit of a card. {Clubs, Diamonds, Hearts, Spades}"""
 
-    def __new__(cls, value, symbol: str, char_symbol: str = None, solid_symbol=None):
+    def __new__(cls, value, symbol: str, char_symbol: str = None, solid_symbol=None) -> Self:
         self = object.__new__(cls)
         self._value_ = value
         return self
 
-    def __init__(self, value, symbol: str, char_symbol=None, solid_symbol=None):
+    def __init__(self, value, symbol: str, char_symbol=None, solid_symbol=None) -> None:
         self._add_value_alias_(self.name)
 
         self.string = self.name.title()
@@ -172,22 +173,22 @@ class Suit(OrderedEnum):
     DIAMONDS = 2, ucd.lookup('WHITE DIAMOND SUIT') + _non_emoji, 'D', ucd.lookup('BLACK DIAMOND SUIT') + _non_emoji
     CLUBS = 3, ucd.lookup('BLACK CLUB SUIT') + _non_emoji, 'C'
 
-    def _add_value_alias_(self, value):
+    def _add_value_alias_(self, value) -> None:
         super()._add_value_alias_(value)
         if hasattr(value, "upper"):
             super()._add_value_alias_(value.upper())
 
     @classmethod
-    def _missing_(cls, value: str):
+    def _missing_(cls, value: str) -> Self | None:
         if hasattr(value, "upper") and value.upper() in cls:
             return cls(value.upper())
         else:
             return None
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.string
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec) -> str:
         spec = FormatSpec(format_spec)
 
         match spec.type, spec.alt:
@@ -207,12 +208,12 @@ class Kind(OrderedEnum):
 
     _ignore_ = ["r", "s"]
 
-    def __new__(cls, rank: Rank = None, suit: Suit = None):
+    def __new__(cls, rank: Rank = None, suit: Suit = None) -> Self:
         self = object.__new__(cls)
         self._value_ = (Rank(rank), Suit(suit))
         return self
 
-    def __init__(self, rank: Rank = None, suit: Suit = None):
+    def __init__(self, rank: Rank = None, suit: Suit = None) -> None:
         self.rank: Rank = Rank(rank)
         self.suit: Suit = Suit(suit)
         self.symbol: str = ucd.lookup(f"PLAYING CARD {rank!s} OF {suit!s}") + _non_emoji
@@ -224,20 +225,20 @@ class Kind(OrderedEnum):
     for r, s in product(Rank, Suit):  # Generate types from product(Rank, Suit)
         locals()[f"{r.name}_{s.name}"] = (r, s)
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> bool:
         return self.rank < other.rank or (self.rank == other.rank and self.suit < other.suit)
 
-    def __le__(self, other):
+    def __le__(self, other) -> bool:
         return self.rank < other.rank or (self.rank == other.rank and self.suit <= other.suit)
 
-    def __ge__(self, other):
+    def __ge__(self, other) -> bool:
         return self.rank > other.rank or (self.rank == other.rank and self.suit > other.suit)
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         return self.rank > other.rank or (self.rank == other.rank and self.suit >= other.suit)
 
     @classmethod
-    def _missing_(cls, value):
+    def _missing_(cls, value) -> Self | None:
         match value:
             case (Rank(rank) | str(rank), Suit(suit) | str(suit)) if (Rank(rank), Suit(suit)) in cls:
                 return cls(Rank(rank), Suit(suit))
@@ -254,7 +255,7 @@ class Kind(OrderedEnum):
 
         return None  # Should be unreachable, but just in case.
 
-    def _add_value_alias_(self, value):
+    def _add_value_alias_(self, value) -> None:
         super()._add_value_alias_(value)
         if hasattr(value, "upper"):
             super()._add_value_alias_(value.upper())
@@ -271,16 +272,16 @@ class Card:
     Kinds: type[Kind] = staticmethod(Kind)
 
     @overload
-    def __init__(self, rank: Card.Ranks, suit: Card.Suits, *, face_up: bool = False):
+    def __init__(self, rank: Card.Ranks, suit: Card.Suits, *, face_up: bool = False) -> None:
         self._kind: Card.Kinds = self.Kinds(rank, suit)
         self._face_up: bool = face_up
 
     @overload
-    def __init__(self, kind: Card.Kinds, *, face_up: bool = False):
+    def __init__(self, kind: Card.Kinds, *, face_up: bool = False) -> None:
         self._kind: Card.Kinds = kind
         self._face_up: bool = face_up
 
-    def __init__(self, *args, face_up: bool = False, **kwargs):
+    def __init__(self, *args, face_up: bool = False, **kwargs) -> None:
         if len(args) == 1:
             self._kind: Card.Kinds = self.Kinds(args[0])
         else:  # len(args) == 2
@@ -464,21 +465,21 @@ class Deck(MutableSequence[Card]):
     def discard_pile(self) -> list[Card]:
         return list(self._discard_pile)
 
-    def sort_draw(self):
+    def sort_draw(self) -> None:
         temp = self._sort_algorithm(self._draw_pile, key=self._sort_key, reverse=False)
         self._draw_pile.clear()
         self._draw_pile.extend(temp)
 
-    def sort_discard(self):
+    def sort_discard(self) -> None:
         temp = self._sort_algorithm(self._discard_pile, key=self._sort_key, reverse=False)
         self._discard_pile.clear()
         self._discard_pile.extend(temp)
 
-    def sort(self):
+    def sort(self) -> None:
         """Alias for sort_draw()."""
         self.sort_draw()
 
-    def re_sort(self):
+    def re_sort(self) -> None:
         """Return all cards from the discard pile to the draw pile, and re-sort the deck."""
         self._draw_pile.extend(self._discard_pile)
         self._discard_pile.clear()
@@ -487,25 +488,25 @@ class Deck(MutableSequence[Card]):
     def draw(self) -> Card:
         return self._draw_pile.pop()
 
-    def shuffle_draw(self):
+    def shuffle_draw(self) -> None:
         shuffle(self._draw_pile)
 
-    def shuffle_discard(self):
+    def shuffle_discard(self) -> None:
         shuffle(self._discard_pile)
 
-    def shuffle(self):
+    def shuffle(self) -> None:
         """Alias for shuffle_draw()."""
         self.shuffle_draw()
 
-    def re_shuffle(self):  # TODO
+    def re_shuffle(self) -> None:  # TODO
         """Return all cards from the discard pile to the draw pile, and reshuffle."""
         ...
 
-    def return_top(self):  # TODO
+    def return_top(self) -> None:  # TODO
         """Return all cards from the discard pile to the top of the draw pile."""
         ...
 
-    def return_bottom(self):  # TODO
+    def return_bottom(self) -> None:  # TODO
         """Return all cards from the discard pile to the bottom of the draw pile."""
         ...
 
@@ -532,11 +533,14 @@ class Deck(MutableSequence[Card]):
         ...
 
     @overload
-    def __getitem__(self, index: slice) -> Hand:
+    def __getitem__(self, index: slice) -> list[Card]:
         ...
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int | slice) -> Card | list[Card]:
         return self._draw_pile[index]
+
+    def __setitem__(self, key, value) -> None:
+        pass
 
     @overload
     def __delitem__(self, index: int) -> None:
@@ -546,19 +550,17 @@ class Deck(MutableSequence[Card]):
     def __delitem__(self, index: slice) -> None:
         ...
 
-    def __delitem__(self, index):
+    def __delitem__(self, index) -> None:
         pass
 
-    def __setitem__(self, key, value):
+    def insert(self, index, value) -> None:
         pass
 
-    def insert(self, index, value):
-        pass
-
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._owned_cards)
 
-    def _o_n_sort(self, pile: cirque, key: None = None, reverse: bool = False):  # TODO implement key and reverse
+    def _o_n_sort(self, pile: cirque, key: None = None, reverse: bool = False) -> Iterable[Card]:
+        # TODO implement key and reverse
 
         counter = {}
         for card in pile:
@@ -570,8 +572,8 @@ class Deck(MutableSequence[Card]):
 class Shoe(Deck):
     """A grouping of multiple 52-card decks treated as one."""
 
-    def __init__(self, num_decks: int, *, sort_key: Callable[[Card, Card], bool] = None,
-                 sort_algorithm: SortAlgorithm[Card] = None):
+    def __init__(self, num_decks: int, *, sort_key: ComparisonKey[Card] = None,
+                 sort_algorithm: SortAlgorithm[Card] = None) -> None:
         self._draw_pile = cirque[Card](maxlen=52 * num_decks)
         for _ in range(num_decks):
             self._draw_pile.extend(Card(kind) for kind in self._new_deck_order)
@@ -582,31 +584,31 @@ class Shoe(Deck):
 class Hand(Collection[Card]):
     """A hand of cards. Must be linked to a parent Deck or Shoe."""
 
-    def __init__(self, parent: Deck):
+    def __init__(self, parent: Deck) -> None:
         self.parent: Deck = parent
         self.cards: LinkedStack[Card] = LinkedStack()  # realistically a list is perfectly adequate here
         # FIXME in production
 
-    def draw(self, count: int = 1, face_up: bool = None):
+    def draw(self, count: int = 1, face_up: bool = None) -> None:
         for _ in range(count):
             self.cards.append(self.parent.draw())
             if face_up is not None:
                 self.cards[-1].face_up = face_up
 
-    def discard(self, value):
+    def discard(self, value) -> None:
         self.parent._discard_pile.append(
             self.cards.pop(self.cards.index(value))
         )
 
-    def discard_all(self):
+    def discard_all(self) -> None:
         for c in self.cards:
             self.discard(c)
 
-    def __contains__(self, card_type):
+    def __contains__(self, card_type) -> bool:
         return any(card.kind is card_type or card == card_type for card in self.cards)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.cards)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[Card]:
         yield from self.cards
