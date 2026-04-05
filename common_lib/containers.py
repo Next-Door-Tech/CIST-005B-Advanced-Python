@@ -212,7 +212,7 @@ class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
             self._len += 1
 
     def index(self, value: T, start: int = 0, stop: int = None, /) -> int:
-        return super().index(value, start, stop)
+        return super().index(value, start, cast(int, stop))
 
     def remove(self, value: T) -> None:
         del self[self.index(value)]
