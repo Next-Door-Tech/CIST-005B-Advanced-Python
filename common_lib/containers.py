@@ -1,6 +1,5 @@
 from itertools import chain
 from typing import Self, NoReturn, Literal, Never, cast, overload
-from collections import deque
 from collections.abc import MutableSequence, Iterable, Collection, Generator
 from copy import copy, deepcopy
 from abc import ABC
@@ -71,7 +70,7 @@ class _CommonMethods[T](Collection[T], ABC):
         return range(len(self))[index]
 
 
-class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
+class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
     """A circular queue, emulated in python."""
 
     def __new__(cls, maxlen: int = 0, iterable: Iterable[T] = None) -> cirque[T]:
