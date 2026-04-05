@@ -106,7 +106,7 @@ class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
     def _array_index(self, index: int) -> int:
         """Normalizes an index into self._array based on self._offset."""
         if self.maxlen != 0:
-            return self._offset + index % self.maxlen
+            return (self._offset + index) % self.maxlen
         else:
             raise IndexError(f"{type(self)} has maxlen of 0; index out of range")
 
@@ -269,10 +269,11 @@ class cirque[T](MutableSequence[T], _CommonMethods[T], deque[T]):  # noqa: N802
         ...
 
     def __getitem__(self, index: int | slice) -> T | list[T]:
-        match self._check_index(index):
-            case int(index):
-                return self._array[self._array_index(index)]
-            case range() as indices:
+        indices = self._check_index(index)
+        match index:
+            case int():
+                return self._array[self._array_index(index % len(self))]
+            case range():
                 return [self._array[self._array_index(i)] for i in indices]
 
         raise RuntimeError("This point should be unreachable.")
