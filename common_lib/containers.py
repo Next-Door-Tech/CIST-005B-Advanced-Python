@@ -20,7 +20,11 @@ class _CommonMethods[T](Collection[T], ABC):
         ...
 
     @overload
-    def _check_index(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
+    def _check_index(self, index: slice, *, int_only: bool = False) -> range:
+        ...
+
+    @overload
+    def _check_index(self, index: int | slice, *, int_only: bool = False) -> int | range:
         ...
 
     def _check_index(self, index: int | slice, *, int_only: bool = False) -> int | range:
@@ -49,7 +53,11 @@ class _CommonMethods[T](Collection[T], ABC):
         ...
 
     @overload
-    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range | NoReturn:
+    def _check_index_inclusive(self, index: slice, *, int_only: bool = False) -> range:
+        ...
+
+    @overload
+    def _check_index_inclusive(self, index: int | slice, *, int_only: bool = False) -> int | range:
         ...
 
     def _check_index_inclusive(self, index: int | slice, *, int_only: bool = False) -> int | range:
