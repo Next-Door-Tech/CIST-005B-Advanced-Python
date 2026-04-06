@@ -4,8 +4,8 @@ from functools import cache
 from itertools import product, chain
 from random import shuffle
 from types import NotImplementedType
-from typing import overload, Self, Protocol, Collection, Generator, Optional
-from collections.abc import MutableSequence, Iterable, Callable
+from typing import overload, Self, Protocol, cast
+from collections.abc import MutableSequence, Iterable, Collection, Generator
 from .containers import cirque, LinkedList
 from .formatspec import FormatSpec
 import sys
@@ -401,12 +401,19 @@ class Card:
                 return format(str(self), format_spec)
 
 
+class Comparable(Protocol):
+    def __lt__(self, other) -> bool:
+        ...
+
+
 class SortAlgorithm[T](Protocol):
-    def __call__(self, iterable: Iterable[T], key: Callable[[T, T], bool] = None, reverse: bool = None) -> list[T]: ...
+    def __call__(self, iterable: Iterable[T],
+                 *, key: ComparisonKey[T] = None, reverse: bool = False) -> list[T]:
+        ...
 
 
 class ComparisonKey[T](Protocol):
-    def __call__(self, left: T, right: T) -> bool: ...
+    def __call__(self, left: T) -> Comparable: ...
 
 
 class Deck(MutableSequence[Card]):
@@ -424,13 +431,13 @@ class Deck(MutableSequence[Card]):
     they are automatically returned to the deck's discard pile.
     """
 
-    _new_deck_order: tuple[Kind] = tuple(chain(
+    _new_deck_order: tuple[Kind, ...] = tuple(chain(
         (Kind(rank, Card.Suits.SPADES) for rank in Card.Ranks),
         (Kind(rank, Card.Suits.DIAMONDS) for rank in Card.Ranks),
         reversed([Kind(rank, Card.Suits.HEARTS) for rank in Card.Ranks]),
         reversed([Kind(rank, Card.Suits.CLUBS) for rank in Card.Ranks])
     ))
-    _sort_key: Optional[ComparisonKey[Card]] = None
+    _sort_key: ComparisonKey[Card] = _new_deck_order.index
     _sort_algorithm: SortAlgorithm[Card] = sorted  # Override in subclass for HW assignment
 
     def __init__(self, *, sort_key: ComparisonKey[Card] = None, sort_algorithm: SortAlgorithm[Card] = None):
@@ -453,12 +460,12 @@ class Deck(MutableSequence[Card]):
         if not hasattr(self, '_discard_pile'):
             self._discard_pile = cirque[Card](maxlen=self._draw_pile.maxlen)
 
-        # self._owned_cards = {kind: [] for kind in Card.Kinds}
-        # for card in self._draw_pile:
-        #     self._owned_cards[card.kind].append(card)
+        _owned_cards: dict[Card.Kind, list[Card]] = {kind: [] for kind in Card.Kinds}
+        for card in self._draw_pile:
+            _owned_cards[card.kind].append(card)
 
         self._owned_cards: frozendict[Card.Kind, tuple[Card, ...]] = frozendict(
-            {kind: tuple(self._owned_cards[kind]) for kind in self._owned_cards}
+            {kind: tuple(_owned_cards[kind]) for kind in _owned_cards}
         )
 
         if sort_algorithm is not None:
