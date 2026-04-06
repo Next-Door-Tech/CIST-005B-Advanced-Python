@@ -1,6 +1,6 @@
 from itertools import chain
-from typing import Self, NoReturn, Literal, Never, cast, overload, Optional, TypeVar
-from collections.abc import MutableSequence, Iterable, Collection, Sized, Generator
+from typing import Self, NoReturn, Literal, Optional, Never, cast, overload, TYPE_CHECKING
+from collections.abc import Sequence, MutableSequence, Iterable, Collection, Sized, Generator
 from copy import copy, deepcopy
 from abc import ABC
 
@@ -273,8 +273,9 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
         match index:
             case int():
                 return cast(T, self._array[self._array_index(index % len(self))])
-            case range():
-                return [self._array[self._array_index(i)] for i in indices]
+            case slice():
+                assert isinstance(indices, range)
+                return [cast(list[T], self._array)[self._array_index(i)] for i in indices]
 
         raise RuntimeError("This point should be unreachable.")
 
@@ -288,20 +289,24 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
 
     def __setitem__(self, index: int | slice, value: T | Iterable[T]) -> None:
         indices = self._check_index(index)
-        match index, value:
+        match index:
             case int():
-                self._array[self._array_index(index)] = value
+                self._array[self._array_index(index % len(self))] = cast(T, value)
             case slice():
                 start, stop, step = index.indices(len(self))
                 if step == 1:
                     tail = self[stop:]
                     del self[start:]
-                    self.extend(value)
+                    self.extend(cast(Iterable[T], value))
                     self.extend(tail)
 
                 else:  # extended slice, check that length of slice and iterable are the same
                     if not hasattr(value, '__len__') or value is self or value is self._array:
-                        value = list(value)
+                        value = list(cast(Iterable[T], value))
+
+                    if TYPE_CHECKING:
+                        assert isinstance(value, Sequence)
+                        assert isinstance(indices, range)
 
                     if len(value) != len(indices):
                         raise ValueError(
@@ -322,6 +327,7 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
     def __delitem__(self, index) -> None:
         match self._check_index(index):
             case int():
+                index %= len(self)
                 if index == 0:  # first item
                     self._array[self._offset] = None
                     self._offset += 1
