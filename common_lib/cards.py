@@ -265,10 +265,11 @@ class Kind(OrderedEnum):
 class Card:
     __slots__ = ("_kind", "_face_up", "__weakref__")
 
-    Ranks = staticmethod(Rank)
-    Suits = staticmethod(Suit)
-    Colors = staticmethod(Color)
-    Kinds = staticmethod(Kind)
+    # type hint casting magic required to turn enums into class attributes
+    Ranks: type[Rank] = cast(type[Rank], cast(object, staticmethod(Rank)))
+    Suits: type[Suit] = cast(type[Suit], cast(object, staticmethod(Suit)))
+    Colors: type[Color] = cast(type[Color], cast(object, staticmethod(Color)))
+    Kinds: type[Kind] = cast(type[Kind], cast(object, staticmethod(Kind)))
 
     type Rank = Rank
     type Suit = Suit
