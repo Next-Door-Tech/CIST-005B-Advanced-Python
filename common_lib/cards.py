@@ -3,9 +3,9 @@ from enum import Enum
 from itertools import product, chain
 from random import shuffle
 from types import NotImplementedType
-from typing import overload, Self, Protocol, Collection, Generator
+from typing import overload, Self, Protocol, Collection, Generator, Optional
 from collections.abc import MutableSequence, Iterable, Callable
-from .containers import cirque, LinkedStack
+from .containers import cirque, LinkedList
 from .formatspec import FormatSpec
 import sys
 
@@ -78,7 +78,7 @@ class Rank(OrderedEnum):
             super()._add_value_alias_(value.upper())
 
     @classmethod
-    def _missing_(cls, value: str) -> Self | None:
+    def _missing_(cls, value: object) -> Self | None:
         if hasattr(value, "upper") and value.upper() in cls:
             return cls(value.upper())
         else:
@@ -240,20 +240,19 @@ class Kind(OrderedEnum):
     @classmethod
     def _missing_(cls, value) -> Self | None:
         match value:
-            case (Rank(rank) | str(rank), Suit(suit) | str(suit)) if (Rank(rank), Suit(suit)) in cls:
+            case (Rank() | str() as rank), (Suit() | str() as suit) if (
+                    rank in Rank and suit in Suit and (Rank(rank), Suit(suit)) in cls):
                 return cls(Rank(rank), Suit(suit))
-            case (Suit(suit), Rank(rank) | str(rank)) if (Rank(rank), Suit(suit)) in cls:
+            case (Suit() as suit), (Rank() | str() as rank) if (rank in Rank and (Rank(rank), Suit(suit)) in cls):
                 return cls(Rank(rank), Suit(suit))
-            case (Suit(suit) | str(suit), Rank(rank)) if (Rank(rank), Suit(suit)) in cls:
+            case (Suit() | str() as suit), (Rank() as rank) if (suit in Suit and (Rank(rank), Suit(suit)) in cls):
                 return cls(Rank(rank), Suit(suit))
-            case str() if value.upper() in cls:
+            case str(value) if value.upper() in cls:
                 return cls(value.upper())
             case str():  # TODO add search matching for names of rank and suit
                 raise NotImplementedError
             case _:
                 return None
-
-        return None  # Should be unreachable, but just in case.
 
     def _add_value_alias_(self, value) -> None:
         super()._add_value_alias_(value)
@@ -266,45 +265,53 @@ class Kind(OrderedEnum):
 class Card:
     __slots__ = ("_kind", "_face_up", "__weakref__")
 
-    Ranks: type[Rank] = staticmethod(Rank)
-    Suits: type[Suit] = staticmethod(Suit)
-    Colors: type[Color] = staticmethod(Color)
-    Kinds: type[Kind] = staticmethod(Kind)
+    Ranks = staticmethod(Rank)
+    Suits = staticmethod(Suit)
+    Colors = staticmethod(Color)
+    Kinds = staticmethod(Kind)
+
+    type Rank = Rank
+    type Suit = Suit
+    type Color = Color
+    type Kind = Kind
+
+    _kind: Kind
+    _face_up: bool
 
     @overload
-    def __init__(self, rank: Card.Ranks, suit: Card.Suits, *, face_up: bool = False) -> None:
-        self._kind: Card.Kinds = self.Kinds(rank, suit)
+    def __init__(self, rank: Rank, suit: Suit, *, face_up: bool = False) -> None:
+        self._kind: Kind = self.Kinds(rank, suit)
         self._face_up: bool = face_up
 
     @overload
-    def __init__(self, kind: Card.Kinds, *, face_up: bool = False) -> None:
-        self._kind: Card.Kinds = kind
+    def __init__(self, kind: Kind, *, face_up: bool = False) -> None:
+        self._kind: Kind = kind
         self._face_up: bool = face_up
 
     def __init__(self, *args, face_up: bool = False, **kwargs) -> None:
         if len(args) == 1:
-            self._kind: Card.Kinds = self.Kinds(args[0])
+            self._kind: Kind = self.Kinds(args[0])
         else:  # len(args) == 2
-            self._kind: Card.Kinds = self.Kinds(*args[0:1])
+            self._kind: Kind = self.Kinds(*args[0:1])
         self._face_up: bool = face_up
 
     @property
-    def kind(self) -> Card.Kinds:
+    def kind(self) -> Kind:
         """The kind of the card, i.e. its rank and suit."""
         return self._kind
 
     @property
-    def rank(self) -> Card.Ranks:
+    def rank(self) -> Rank:
         """The rank of the card."""
         return self._kind.rank
 
     @property
-    def suit(self) -> Card.Suits:
+    def suit(self) -> Suit:
         """The suit of the card."""
         return self._kind.suit
 
     @property
-    def color(self) -> Card.Colors:
+    def color(self) -> Color:
         """The color of the card."""
         return self._kind.color
 
@@ -331,17 +338,17 @@ class Card:
         self._face_up = not self._face_up
 
     @property
-    def front_symbol(self):
+    def front_symbol(self) -> str:
         """The symbol representing the front of the card."""
         return self._kind.symbol
 
     @property
-    def back_symbol(self):
+    def back_symbol(self) -> str:
         """The symbol representing the back of the card."""
         return self._kind.back_symbol
 
     @property
-    def symbol(self):
+    def symbol(self) -> str:
         """The symbol representing the front or back of the card, as it is currently flipped."""
         return self.front_symbol if self.face_up else self.back_symbol
 
@@ -357,19 +364,19 @@ class Card:
     def __gt__(self, other: Self) -> bool:
         return self._kind > other._kind
 
-    def __eq__(self, other: Self) -> bool:
+    def __eq__(self, other: Self) -> bool:  # type: ignore[override]
         return self._kind == other._kind
 
-    def __ne__(self, other: Self) -> bool:
+    def __ne__(self, other: Self) -> bool:  # type: ignore[override]
         return self._kind != other.kind
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"[{self.rank!s} of {self.suit!s}]" if self.face_up else "[A face down card.]"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Card('{self.rank.name}', '{self.suit.name}', face_up = {self.face_up})"
 
-    def __format__(self, format_spec):
+    def __format__(self, format_spec) -> str:
         spec = FormatSpec(format_spec)
         match spec.type, spec.alt:
             case 'c', None:
@@ -421,7 +428,7 @@ class Deck(MutableSequence[Card]):
         reversed([Kind(rank, Card.Suits.HEARTS) for rank in Card.Ranks]),
         reversed([Kind(rank, Card.Suits.CLUBS) for rank in Card.Ranks])
     ))
-    _sort_key: ComparisonKey[Card] = None
+    _sort_key: Optional[ComparisonKey[Card]] = None
     _sort_algorithm: SortAlgorithm[Card] = sorted  # Override in subclass for HW assignment
 
     def __init__(self, *, sort_key: ComparisonKey[Card] = None, sort_algorithm: SortAlgorithm[Card] = None):
@@ -444,11 +451,11 @@ class Deck(MutableSequence[Card]):
         if not hasattr(self, '_discard_pile'):
             self._discard_pile = cirque[Card](maxlen=self._draw_pile.maxlen)
 
-        self._owned_cards = {kind: [] for kind in Card.Kinds}
-        for card in self._draw_pile:
-            self._owned_cards[card.kind].append(card)
+        # self._owned_cards = {kind: [] for kind in Card.Kinds}
+        # for card in self._draw_pile:
+        #     self._owned_cards[card.kind].append(card)
 
-        self._owned_cards: frozendict[type[Card.Kinds], tuple[Card, ...]] = frozendict(
+        self._owned_cards: frozendict[Card.Kind, tuple[Card, ...]] = frozendict(
             {kind: tuple(self._owned_cards[kind]) for kind in self._owned_cards}
         )
 
@@ -520,13 +527,18 @@ class Deck(MutableSequence[Card]):
         """Return whether the deck owns a card of this kind."""
         ...
 
-    def __contains__(self, card: Card | Kind) -> bool:
+    @overload
+    def __contains__(self, card: object) -> bool:
+        """Return whether the deck owns a card of this kind."""
+        ...
+
+    def __contains__(self, card: object) -> bool:
         if isinstance(card, Card):
             return card in self._owned_cards
         elif isinstance(card, Kind):
-            return card in (member.type for member in self._owned_cards)
+            return card in (member for member in self._owned_cards)
         else:
-            raise ValueError
+            return False
 
     @overload
     def __getitem__(self, index: int) -> Card:
@@ -534,6 +546,10 @@ class Deck(MutableSequence[Card]):
 
     @overload
     def __getitem__(self, index: slice) -> list[Card]:
+        ...
+
+    @overload
+    def __getitem__(self, index: int | slice) -> Card | list[Card]:
         ...
 
     def __getitem__(self, index: int | slice) -> Card | list[Card]:
@@ -562,7 +578,7 @@ class Deck(MutableSequence[Card]):
     def _o_n_sort(self, pile: cirque, key: None = None, reverse: bool = False) -> Iterable[Card]:
         # TODO implement key and reverse
 
-        counter = {}
+        counter: dict[Kind, list[Card]] = {}
         for card in pile:
             counter.setdefault(card.kind, []).append(card)
 
@@ -584,19 +600,23 @@ class Shoe(Deck):
 class Hand(Collection[Card]):
     """A hand of cards. Must be linked to a parent Deck or Shoe."""
 
+    parent: Deck
+    cards: LinkedList[Card]
+
     def __init__(self, parent: Deck) -> None:
         self.parent: Deck = parent
-        self.cards: LinkedStack[Card] = LinkedStack()  # realistically a list is perfectly adequate here
+        self.cards: LinkedList[Card] = LinkedList()  # realistically a regular list is perfectly adequate here
         # FIXME in production
 
     def draw(self, count: int = 1, face_up: bool = None) -> None:
         for _ in range(count):
-            self.cards.append(self.parent.draw())
+            card = self.parent.draw()
             if face_up is not None:
-                self.cards[-1].face_up = face_up
+                card.face_up = face_up
+            self.cards.append(card)
 
     def discard(self, value) -> None:
-        self.parent._discard_pile.append(
+        self.parent._discard_pile.append(  # noqa: PyProtectedMember
             self.cards.pop(self.cards.index(value))
         )
 
