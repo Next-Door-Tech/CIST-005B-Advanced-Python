@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Generator
+from typing import Generator, Any, cast
 from common_lib.cards import *
 from enum import Enum, IntEnum
 
@@ -108,7 +108,7 @@ class Dealer(Player):
 
     def __init__(self, deck: Deck):
         super().__init__("Dealer", 0, deck)
-        self.chips: float = float('infinity')
+        self.chips: float = float('infinity')  # type: ignore[assignment]
 
     def initial_deal(self):
         self.hand.draw(1, face_up=True)
@@ -117,7 +117,7 @@ class Dealer(Player):
     def bet(self, amount: int = 0):
         pass  # do nothing; dealer cannot make bets
 
-    def take_turn(self) -> Generator[None, None, None]:
+    def take_turn(self) -> Generator[None, Any, None]:
         if self.has_blackjack:
             return
 
@@ -136,6 +136,8 @@ class BlackjackTable:
         SCORING = 5
         PAYOUT = 6
         POST_ROUND = 7
+
+    _phase: Phase
 
     @property
     def phase(self) -> Phase:
@@ -168,7 +170,7 @@ class BlackjackTable:
     def dealer(self) -> Dealer:
         return self._dealer
 
-    def player(self, seat: int) -> Player:
+    def player(self, seat: int) -> Player | None:
         """player seats are indexed from 1; player(0) is the dealer"""
         if 0 <= seat < len(self._players):
             return self._players[seat]
@@ -177,7 +179,7 @@ class BlackjackTable:
 
     @property
     def active_players(self) -> list[Player]:
-        return [player for player in self._players[1:] if player is not None and player.current_bet > 0]
+        return [cast(Player, player) for player in self._players[1:] if player is not None and player.current_bet > 0]
 
     @property
     def present_players(self) -> list[Player]:
