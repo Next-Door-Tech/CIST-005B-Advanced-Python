@@ -1,5 +1,6 @@
 import unicodedata as ucd
 from enum import Enum
+from functools import cache
 from itertools import product, chain
 from random import shuffle
 from types import NotImplementedType
@@ -573,8 +574,9 @@ class Deck(MutableSequence[Card]):
     def insert(self, index, value) -> None:
         pass
 
+    @cache
     def __len__(self) -> int:
-        return len(self._owned_cards)
+        return sum(len(kind) for kind in self._owned_cards.values())
 
     def _o_n_sort(self, pile: cirque, key: None = None, reverse: bool = False) -> Iterable[Card]:
         # TODO implement key and reverse
