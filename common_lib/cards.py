@@ -507,17 +507,21 @@ class Deck(MutableSequence[Card]):
         """Alias for shuffle_draw()."""
         self.shuffle_draw()
 
-    def re_shuffle(self) -> None:  # TODO
+    def re_shuffle(self) -> None:
         """Return all cards from the discard pile to the draw pile, and reshuffle."""
-        ...
+        self._draw_pile.extend(self._discard_pile)
+        self._discard_pile.clear()
+        self.shuffle()
 
-    def return_top(self) -> None:  # TODO
+    def return_top(self) -> None:
         """Return all cards from the discard pile to the top of the draw pile."""
-        ...
+        self._draw_pile.extend(self._discard_pile)
+        self._discard_pile.clear()
 
-    def return_bottom(self) -> None:  # TODO
+    def return_bottom(self) -> None:
         """Return all cards from the discard pile to the bottom of the draw pile."""
-        ...
+        self._draw_pile.extendleft(self._discard_pile)
+        self._discard_pile.clear()
 
     @overload
     def __contains__(self, card: Card) -> bool:
