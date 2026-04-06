@@ -1,6 +1,6 @@
 from itertools import chain
-from typing import Self, NoReturn, Literal, Never, cast, overload
-from collections.abc import MutableSequence, Iterable, Collection, Generator
+from typing import Self, NoReturn, Literal, Never, cast, overload, Optional, TypeVar
+from collections.abc import MutableSequence, Iterable, Collection, Sized, Generator
 from copy import copy, deepcopy
 from abc import ABC
 
@@ -70,6 +70,7 @@ class _CommonMethods[T](Collection[T], ABC):
         return range(len(self))[index]
 
 
+@Sized.register
 class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
     """A circular queue, emulated in python."""
 
@@ -271,7 +272,7 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
         indices = self._check_index(index)
         match index:
             case int():
-                return self._array[self._array_index(index % len(self))]
+                return cast(T, self._array[self._array_index(index % len(self))])
             case range():
                 return [self._array[self._array_index(i)] for i in indices]
 
@@ -286,10 +287,11 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
         ...
 
     def __setitem__(self, index: int | slice, value: T | Iterable[T]) -> None:
-        match self._check_index(index):
-            case int(index):
+        indices = self._check_index(index)
+        match index, value:
+            case int():
                 self._array[self._array_index(index)] = value
-            case range() as indices:
+            case slice():
                 start, stop, step = index.indices(len(self))
                 if step == 1:
                     tail = self[stop:]
@@ -319,7 +321,7 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
 
     def __delitem__(self, index) -> None:
         match self._check_index(index):
-            case int(index):
+            case int():
                 if index == 0:  # first item
                     self._array[self._offset] = None
                     self._offset += 1
@@ -405,99 +407,106 @@ class cirque[T](MutableSequence[T], _CommonMethods[T]):  # noqa: N802
 
 
 class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
-    class Node(Collection):
+    class Node[U](Collection[U]):
         __slots__ = '_value', '_forward', '__weakref__'
 
-        type Node = LinkedList.Node
+        type Node[V] = LinkedList.Node[V]
 
-        _forward: Node
+        _forward: Node[U] | None
 
-        def __init__(self, value: T, forward: Node = None):
-            self._value: T = value
+        def __init__(self, value: U, forward: Node[U] = None) -> None:
+            self._value: U = value
             self.forward = forward
 
         @property
-        def value(self) -> T:
+        def value(self) -> U:
             return self._value
 
         @value.setter
-        def value(self, value: T) -> None:
+        def value(self, value: U) -> None:
             self._value = value
 
         @property
-        def forward(self) -> Node:
+        def forward(self) -> Node[U] | None:
             return self._forward
 
         @forward.setter
-        def forward(self, node: Node) -> None:
+        def forward(self, node: Node[U] | None) -> None:
             self._forward = node
             if hasattr(node, 'tail'):  # if this is now a tail node
-                node.tail = self
+                node.tail = self  # type: ignore[union-attr]
 
         @forward.deleter
         def forward(self) -> None:
             if self.forward is None:
                 raise IndexError(f"{self.__class__.__qualname__} already points to None")
-            self.forward = self.forward.traverse(1)
 
-        def splice(self, chain_head: Node, chain_tail: Node = None) -> None:
+            assert (fwd := self.forward) is not None  # type hint
+            self.forward = fwd.traverse(1)
+
+        def splice(self, chain_head: Node[U] | None, chain_tail: Optional[Node[U]] = None) -> None:
             """Splices provided node chain in between self and self.forward.
 
             If node_chain has an infinite loop, the loop is first cut after the last unique node.
             If the tail node of the chain is already known, it may be supplied as an optimization.
             """
+
+            if chain_head is None:
+                return  # nothing to splice
+
             if chain_tail is None:
                 chain_tail = chain_head.get_tail()
 
             chain_tail.forward = self.forward
             self.forward = chain_head
 
-        def insert(self, value: T) -> None:
+        def insert(self, value: U) -> None:
             """Inserts value as a new node after this one."""
-            self.forward = LinkedList.Node(value, self.forward)
+            self.forward = LinkedList.Node[U](value, self.forward)
 
-        def inject(self, iterable: Iterable[T]) -> None:
+        def inject(self, iterable: Iterable[U]) -> None:
             """Inserts the values in iterable as new nodes after this one.
 
             Roughly equivalent to calling self.splice(self.from_iterable(iterable))"""
             self.splice(*self.from_iterable(iterable, return_tail=True))
 
-        def traverse(self, count: int) -> Node:  # Recursive traverse
+        def traverse(self, count: int) -> Node[U]:  # Recursive traverse
             if count < 0:
                 raise IndexError(f"{self.__class__.__qualname__} does not support negative indices")
 
             elif count == 0:
                 return self
 
-            elif self.forward is not None:
-                return self.forward.traverse(count - 1)
+            elif (fwd := self.forward) is not None:
+                return fwd.traverse(count - 1)
 
             else:
                 raise IndexError(f"End of forward reference chain reached with {count} indices remaining.")
 
         @overload
-        def get_tail(self, /, *, with_count: bool = False) -> Node | tuple[Node, int]:
+        def get_tail(self, /, *, with_count: Literal[False] = False) -> Node[U]:
             ...
 
         @overload
-        def get_tail(self, /, *, with_count: Literal[True]) -> tuple[Node, int]:
+        def get_tail(self, /, *, with_count: Literal[True]) -> tuple[Node[U], int]:
             ...
 
         @overload
-        def get_tail(self, /, *, with_count: Literal[False]) -> Node:
+        def get_tail(self, /, *, with_count: bool) -> Node[U] | tuple[Node[U], int]:
             ...
 
-        def get_tail(self, /, *, with_count: bool = False) -> Node | tuple[Node, int]:
+        def get_tail(self, /, *, with_count: bool = False) -> Node[U] | tuple[Node[U], int]:
             """Returns the last regular node in the chain.
             If the node points to a circular loop, returns the last unique node found.
             Ignores a trailing sentinel node, if present."""
             tail = self
             memo = {id(self)}
 
-            while tail.forward and id(tail.forward) not in memo:
+            while tail.forward and id(tail.forward) not in memo:  # type: ignore[union-attr]
                 tail = tail.forward
                 memo.add(id(tail))
 
+            assert tail is not None  # type hint
             if with_count:
                 return tail, len(memo)
             else:
@@ -505,21 +514,23 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
 
         @overload
         @classmethod
-        def from_iterable(cls, iterable: Iterable[T], *, return_tail: Literal[False]) -> Node:
+        def from_iterable(cls, iterable: Iterable[U], *, return_tail: Literal[False]) -> Node[U]:
             ...
 
         @overload
         @classmethod
-        def from_iterable(cls, iterable: Iterable[T], *, return_tail: Literal[True]) -> tuple[Node, Node]:
+        def from_iterable(cls, iterable: Iterable[U], *, return_tail: Literal[True]) -> tuple[Node[U], Node[U]]:
             ...
 
         @overload
         @classmethod
-        def from_iterable(cls, iterable: Iterable[T], *, return_tail: bool = False) -> Node | tuple[Node, Node]:
+        def from_iterable(cls, iterable: Iterable[U],
+                          *, return_tail: bool = False) -> Node[U] | tuple[Node[U], Node[U]]:
             ...
 
         @classmethod
-        def from_iterable(cls, iterable: Iterable[T], *, return_tail: bool = False) -> Node | tuple[Node, Node]:
+        def from_iterable(cls, iterable: Iterable[U],
+                          *, return_tail: bool = False) -> Node[U] | tuple[Node[U], Node[U]]:
             try:
                 head = tail = cls(next(i := iter(iterable)))
             except StopIteration as e:
@@ -534,12 +545,12 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             else:
                 return head
 
-        def __iter__(self) -> Generator[Node]:
+        def __iter__(self) -> Generator[Node[U]]:  # type: ignore[override]
             yield self
-            if self.forward is not None:
-                yield from self.forward
+            if (fwd := self.forward) is not None:  # assignment is for type checking
+                yield from fwd
 
-        def __contains__(self, item: T) -> bool:
+        def __contains__(self, item: object) -> bool:
             return self.value is item or self.value == item
 
         def __str__(self) -> str:
@@ -548,7 +559,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         def __repr__(self) -> str:
             return f"{self.__class__.__qualname__}({self.value!r}, {self.forward!r})"
 
-        def __len__(self, /, *, _memo: set[int] = None) -> int:
+        def __len__(self, /, *, _memo: Optional[set[int]] = None) -> int:
             if self.forward is None:
                 return 1
 
@@ -557,16 +568,18 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             else:
                 _memo.add(id(self))
 
+            assert _memo is not None
             if id(self.forward) in _memo:
                 raise RecursionError(f"{self.__class__.__qualname__}: forward reference chain has an infinite loop.")
             else:
-                return 1 + self.forward.__len__(_memo=_memo)
+                assert (fwd := self.forward) is not None
+                return 1 + fwd.__len__(_memo=_memo)  # type: ignore[call-arg]
 
         def __bool__(self) -> bool:
             """Returns whether the node is normal and can be traversed."""
             return True
 
-        def __gt__(self, other: Node | None, /, *, _memo: set[int] = None) -> bool:
+        def __gt__(self, other: Node[U] | None, /, *, _memo: Optional[set[int]] = None) -> bool:
             """Returns whether other is in this node's chain of forward references."""
 
             if self.forward is other:
@@ -574,17 +587,20 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             elif self.forward is None:
                 return False  # if other is None, `self.forward is other` returns True first
             else:
+
                 if _memo is None:
                     _memo = {id(self)}
                 else:
                     _memo.add(id(self))
 
+                assert _memo is not None
                 if id(self.forward) in _memo:  # we have previously visited self.forward without finding other
                     return False  # do not enter infinite loop
                 else:
-                    return self.forward.__gt__(other, _memo=_memo)
+                    assert (fwd := self.forward) is not None
+                    return fwd.__gt__(other, _memo=_memo)  # type: ignore[call-arg]
 
-        def __ge__(self, other: Node) -> bool:
+        def __ge__(self, other: Node[U]) -> bool:
             """Returns whether other is self or other is in this node's chain of forward references."""
             return other is self or self > other
 
@@ -598,7 +614,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             if id(self) in memo:
                 return memo[id(self)]
 
-            new = self.__class__(None)  # delay assignment of new.value
+            new = self.__class__(cast(U, None))  # delay assignment of new.value
             memo[id(self)] = new
 
             if self._shallow_copy_flag in memo:
@@ -610,25 +626,27 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
 
             return new
 
-    class Sentinel(Node):
+    class Sentinel[U](Node[U]):
         __slots__ = '_tail'
 
-        type Node = LinkedList.Node
-        _tail: Node
+        _forward: Node[U]
+
+        type Node[V] = LinkedList.Node[V]
+        _tail: Node[U]
 
         def __init__(self) -> None:
-            super().__init__(value=None, forward=self)
+            super().__init__(value=cast(U, None), forward=self)
             self._forward = self
             self._tail = self
 
         value = property(doc=f"{__qualname__} cannot hold a value.")
 
         @property
-        def head(self) -> Node:
+        def head(self) -> Node[U]:
             return self._forward
 
         @head.setter
-        def head(self, node: Node) -> None:
+        def head(self, node: Node[U]) -> None:
             if node is self or node is None:
                 self.clear()
                 return
@@ -649,14 +667,14 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             else:
                 self.head = self.head.traverse(1)
 
-        forward = property(head.fget, head.fset, head.fdel, "Alias for head.")
+        forward = head  # alias for head
 
         @property
-        def tail(self) -> Node:
+        def tail(self) -> Node[U]:
             return self._tail
 
         @tail.setter
-        def tail(self, node: Node) -> None:
+        def tail(self, node: Node[U]) -> None:
             """Splices node in at tail. If node is already part of the chain, do nothing.
 
             Note that if len(node) > 1, traversing the whole chain to check for the above condition is required."""
@@ -677,10 +695,13 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
                 self._tail = chain_tail
                 chain_tail.forward = self
 
-        def splice(self, node_chain: Node, chain_tail: Node = None) -> None:
+        def splice(self, node_chain: Node[U] | None, chain_tail: Optional[Node[U]] = None) -> None:
             """Splices provided node chain in between self and self.head.
 
             If node_chain has an infinite loop, the loop is first cut after the last unique node."""
+            if node_chain is None:
+                return  # nothing to splice
+
             if chain_tail is None:
                 chain_tail = node_chain.get_tail()
 
@@ -693,7 +714,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             if self._tail is self:
                 self._tail = chain_tail
 
-        def splice_tail(self, node_chain: Node) -> None:
+        def splice_tail(self, node_chain: Node[U]) -> None:
             """Splices provided node chain in between self.tail and self.
 
             If node_chain has an infinite loop, the loop is first cut after the last unique node.
@@ -701,18 +722,18 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             self.tail = node_chain
 
         @overload
-        def get_tail(self, /, *, with_count: bool = False) -> Node | tuple[Node, int]:
+        def get_tail(self, /, *, with_count: Literal[False] = False) -> Node[U]:
             ...
 
         @overload
-        def get_tail(self, /, *, with_count: Literal[True]) -> tuple[Node, int]:
+        def get_tail(self, /, *, with_count: Literal[True] = False) -> tuple[Node[U], int]:  # type: ignore[assignment]
             ...
 
         @overload
-        def get_tail(self, /, *, with_count: Literal[False]) -> Node:
+        def get_tail(self, /, *, with_count: bool = False) -> Node[U] | tuple[Node[U], int]:
             ...
 
-        def get_tail(self, /, *, with_count: bool = False) -> Node | tuple[Node, int]:
+        def get_tail(self, /, *, with_count: bool = False) -> Node[U] | tuple[Node[U], int]:
             if with_count:
                 return self.tail, len(self)
             else:
@@ -722,7 +743,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             self._forward = self
             self._tail = self
 
-        def traverse(self, count: int, *, recursive_call: bool = True) -> Node:  # Recursive traverse
+        def traverse(self, count: int, *, recursive_call: bool = True) -> Node[U]:  # Recursive traverse
             if count == 0:
                 return self
             elif recursive_call:
@@ -733,7 +754,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         def __iter__(self) -> Generator[Never]:
             yield from ()  # stop iterating when sentinel is reached
 
-        def __contains__(self, item: T) -> bool:
+        def __contains__(self, item) -> bool:
             return False
 
         def __str__(self) -> str:
@@ -742,17 +763,18 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         def __repr__(self) -> str:
             return f"{self.__class__.__qualname__}()"
 
-        def __gt__(self, other: Node, /, *, _memo=None) -> bool:
+        def __gt__(self, other: Node[U] | None, /, *,
+                   _memo: Optional[set[int]] = None) -> bool:  # type: ignore[override]
             if _memo is not None:  # if we are calling __gt__ recursively, we have reached the end of the chain
                 return False
             else:
-                return super().__gt__(other, _memo=set())
+                return super().__gt__(other, _memo=set())  # type: ignore[call-arg]
 
-        def __len__(self, /, *, _memo: set[int] = None) -> int:
+        def __len__(self, /, *, _memo: Optional[set[int]] = None) -> int:  # type: ignore[override]
             if self.head is self or _memo is not None:
                 return 0  # if we are calling __len__ recursively, we have reached the end of the chain
             else:
-                return self.head.__len__(_memo=set())
+                return self.head.__len__(_memo=set())  # type: ignore[call-arg]
 
         def __bool__(self) -> bool:
             return False
@@ -771,7 +793,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
 
             return new
 
-    _sentinel: Sentinel
+    _sentinel: Sentinel[T]
     _count: int
 
     def __init__(self, iterable: Iterable[T] = None) -> None:
@@ -782,16 +804,20 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             self.extend(iterable)
 
     @property
-    def _head(self) -> Node:
+    def _head(self) -> Node[T]:
         return self._sentinel.head
 
     @_head.setter
-    def _head(self, node: Node | None) -> None:
+    def _head(self, node: Node[T] | None) -> None:
         """Splice the specified node chain in at _head."""
         if not isinstance(node, self.Node | None):
             raise TypeError(
                 f"{self.__class__.__qualname__}._head must be '{type(self.Node).__qualname__}', not '{type(node)}'"
             )
+
+        if node is None:
+            self.clear()
+            return
 
         node_tail, count = node.get_tail(with_count=True)
 
@@ -812,11 +838,11 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
             raise IndexError(f"{self.__class__.__qualname__} is already empty")
 
     @property
-    def _tail(self) -> Node:
+    def _tail(self) -> Node[T]:
         return self._sentinel.tail
 
     @_tail.setter
-    def _tail(self, node: Node) -> None:
+    def _tail(self, node: Node[T]) -> None:
         self._sentinel.tail = node
 
     def append(self, value: T) -> None:
@@ -923,7 +949,9 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
 
     def remove(self, value: T) -> None:
         for node in chain([self._sentinel], self._head):
-            if value in node.forward:
+            assert isinstance(node, self.__class__.Node)
+            assert (fwd := node.forward) is not None
+            if value in fwd:
                 del node.forward
                 self._count -= 1
                 return
@@ -944,6 +972,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
         self._head.forward = self._sentinel
 
         while cursor is not self._sentinel:
+            assert cursor is not None
             fwd = cursor.forward
             cursor.forward = self._head
             self._head = cursor
@@ -967,10 +996,11 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
                 return self._tail.value
 
             case int():
+                assert isinstance(index, int)
                 return self._head.traverse(index % len(self)).value
 
             case range() as indices:
-                indices: range  # type checker thinks indices is Never
+                assert isinstance(index, slice)
 
                 i = min(indices)
                 cursor = self._head.traverse(i)
@@ -998,10 +1028,11 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
     def __setitem__(self, index: int | slice, value: T | Iterable[T]) -> None:
         match self._check_index(index):
             case int() if index == -1 or index == len(self) - 1:
-                self._tail.value = value
+                self._tail.value = cast(T, value)
 
             case int():
-                self._head.traverse(index % len(self)).value = value
+                assert isinstance(index, int)
+                self._head.traverse(index % len(self)).value = cast(T, value)
 
             case range():
                 raise NotImplementedError  # TODO
@@ -1020,9 +1051,11 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
                 del self._head
                 # no need to decrement _count as del self._head already does this
             case int():
+                assert isinstance(index, int)
                 del self._head.traverse(index - 1).forward
                 self._count -= 1
             case range() as indices:
+                assert isinstance(index, slice)
                 if index.step == 1 or index.step == -1:
                     # TODO optimize for continuous ranges
                     pass
