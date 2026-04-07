@@ -4,6 +4,19 @@ from common_lib.cards import *
 from enum import Enum, IntEnum
 
 
+def confirm(prompt: str = "Yes/no:", error: str = "I didn't understand that. Could you try again?") -> bool:
+    tries = 0
+    prompt = prompt.strip() + " "
+    while not (response := input(prompt).lower().strip()).startswith(('y', 'n')):
+        print(error)
+        tries += 1
+        if tries == 2:
+            prompt += "(Yes or no) "
+
+    print()
+    return response.startswith('y')
+
+
 class BlackjackHand(Hand):
     @staticmethod
     def card_value(card: Card) -> int:
@@ -38,14 +51,20 @@ class Player:
     def __init__(self, name: str, chips: int, deck: Deck) -> None:
         self.name: str = name
         self.chips: int = chips
+        self._starting_chips: int = chips
         self.hand: BlackjackHand = BlackjackHand(deck)
         self._bet = 0
 
+    @property
+    def starting_chips(self) -> int:
+        return self._starting_chips
+
     def bet(self, amount: int) -> None:
-        if amount < 0:
+        if amount < -self.current_bet:  #
             raise ValueError("cannot bet a negative number of chips")
+
         if self.chips < amount:
-            raise ValueError(f"player has only {self.chips} chips, cannot bet {amount}")
+            raise ValueError(f"{self.name} has only {self.chips} chips, cannot bet {amount}")
         else:
             self._bet += amount
             self.chips -= amount
@@ -72,19 +91,21 @@ class Player:
         return len(self.hand) == 2 and self.hand.value == 21
 
     def take_turn(self) -> Generator[None, Actions, None]:
+        """Creates a generator object which can be iterated over for the length of a player's turn."""
         if self.has_blackjack:
             return
 
-        action = yield
-        while action is self.Actions.HIT and not self.has_busted and not self.hand.value == 21:
-            self.hit()
+        while not self.has_busted and not self.hand.value == 21:
             action = yield
+            if action is not self.Actions.HIT:
+                break
+            self.hit()
 
     def end_turn(self, dealer: Dealer) -> None:
         if self.has_busted:
             self.lose()
             return
-        elif self.hand.value < dealer.hand.value:
+        elif self.hand.value > dealer.hand.value:
             self.win()
             return
 
@@ -130,12 +151,8 @@ class BlackjackTable:
     class Phase(IntEnum):
         PRE_ROUND = 0
         BETTING = 1
-        DEALING = 2
-        PLAYER_TURN = 3
-        DEALER_TURN = 4
-        SCORING = 5
-        PAYOUT = 6
-        POST_ROUND = 7
+        PLAYING = 2
+        POST_ROUND = 3
 
     _phase: Phase
 
@@ -146,12 +163,10 @@ class BlackjackTable:
     @phase.setter
     def phase(self, next_phase: Phase) -> None:
         next_phase = self.Phase(next_phase)
-        if next_phase is self._phase or next_phase is self.Phase(self._phase + 1):
+        if next_phase is self._phase or next_phase == self.Phase(self._phase) + 1:
             self._phase = next_phase  # can re-enter same phase from itself, or enter next phase in order
         elif next_phase is self.Phase.PRE_ROUND and self._phase is self.Phase.POST_ROUND:
             self._phase = next_phase  # can enter PRE_ROUND from POST_ROUND
-        elif next_phase is self.Phase.SCORING and self._phase is self.Phase.DEALING:
-            self._phase = next_phase  # dealer has blackjack -> players lose, intermediate phases are skipped
         else:
             raise ValueError(f"cannot enter phase {next_phase.name} from phase {self._phase.name}")
 
@@ -185,6 +200,10 @@ class BlackjackTable:
     def present_players(self) -> list[Player]:
         return [player for player in self._players[1:] if player is not None]
 
+    @property
+    def num_present_players(self) -> int:
+        return sum(1 for player in self._players[1:] if player is not None)
+
     def join_table(self, seat: int, name: str = "Anonymous", chips: int = 0) -> None:
         if self.phase is not self.Phase.PRE_ROUND:
             raise RuntimeError(f"new players may not join the table in the middle of a round")
@@ -209,25 +228,142 @@ class BlackjackTable:
         else:
             raise ValueError(f"seat {seat} is already empty")
 
+    def pre_round(self) -> None:
+        print(self)
+        if self.num_present_players > 0 and confirm("Would anyone like to leave the table?"):
+            for i in range(1, self.max_players):
+                player = self.player(i)
+                if player is not None and confirm(f"{player.name}, would you like to leave the table?"):
+                    if player.chips > player.starting_chips:
+                        print(f"Enjoy your winnings, {player.name}.")
+                    else:
+                        print(f"Have a good day, {player.name}.")
+                    self.leave_table(i)
+            print(self)
+
+        else_ = ""
+        while self.num_present_players < self.max_players and confirm(f"Would anyone {else_}like to join the table?"):
+            else_ = "else "
+            try:
+                name = input("What is your name? ")
+                seat = None
+                chips = None
+
+                while seat is None:
+                    try:
+                        seat = int(input(f"Which seat will you be taking, {name}? "))
+
+                        if seat > self.max_players:
+                            print("We don't have that many seats at this table.")
+                            seat = None
+                        elif seat < 1:
+                            print("The seats are numbered starting at 1.")
+                            seat = None
+                        elif self.player(seat) is not None:
+                            print(f"Sorry, {cast(Player, self.player(seat)).name} is already at that seat.")
+                            seat = None
+                    except ValueError:
+                        print("I didn't understand that.")
+
+                    if not seat and not confirm(f"Would you still like to join the table, {name}? "):
+                        raise KeyboardInterrupt
+
+                while chips is None:
+                    try:
+                        chips = int(input(f"How many chips do you have, {name}? "))
+
+                        if chips == 0:
+                            print("Just watching? I understand, but you won't be able to play.")
+                        if chips < 0:
+                            print("In debt already? Unfortunately I won't be able to let you join the table.")
+                            raise KeyboardInterrupt
+
+                    except ValueError:
+                        print("I didn't understand that.")
+                        if not confirm(f"Would you still like to join the table, {name}? "):
+                            raise KeyboardInterrupt
+
+                print(f"Welcome to the table, {name}.\n")
+                self.join_table(seat, name, chips)
+
+            except KeyboardInterrupt:
+                print(self)
+                continue
+
+            print(self)
+
+        if confirm("Is everyone ready to begin betting?"):
+            self.phase = self.Phase.BETTING
+
     def start_betting(self) -> None:
-        self.phase = self.Phase.BETTING
+        for player in self.present_players:
+            success = False
+            while not success:
+                try:
+                    bet = int(input(f"{player.name}, your bet? "))
+                except ValueError:
+                    print("I didn't understand that. Could you try again?")
+                    continue
+
+                try:
+                    player.bet(bet)
+                except ValueError:
+                    print(f"Unfortunately I can't let you bet {bet} chips.")
+                    continue
+
+                success = True
+
+            print(self)
+
+        if confirm("Has everyone placed their bets? "):
+            print("Bets are closed.")
+            self.phase = self.Phase.PLAYING
 
     def start_round(self) -> None:
         for _ in self.initial_deal():
             print(self)
             sleep(1)
 
-        self.take_turns()
+        if not self.dealer.has_blackjack:
+            self.take_turns()
 
-        for player in self.active_players:
-            if player.has_busted:
-                print(player.name, "has busted (phrasing, genius)\n")
-            elif player.hand.value > self.dealer.hand.value:
-                print(player.name, f"wins against dealer, {player.hand.value} to {self.dealer.hand.value}")
-            player.end_turn(self.dealer)
+        self.phase = self.Phase.POST_ROUND
+        return
+
+    def post_round(self) -> None:
+        if self.dealer.has_blackjack:
+            print("Dealer has blackjack; everyone loses their bets.")
+            for player in self.active_players:
+                player.end_turn(self.dealer)
+
+        else:
+            for player in self.active_players:
+                if player.has_busted:
+                    print(player.name, "has busted (phrasing, genius).")
+                elif player.has_blackjack and self.dealer.has_busted:
+                    print(player.name, f"wins with blackjack against the dealer, who busted.")
+                elif player.has_blackjack and player.hand.value > self.dealer.hand.value:
+                    print(player.name, f"wins with blackjack against the dealer, who scored {self.dealer.hand.value}.")
+                elif player.hand.value == self.dealer.hand.value:
+                    print(player.name,
+                          f"loses in a tie against dealer, {player.hand.value} to {self.dealer.hand.value}.")
+                elif player.hand.value > self.dealer.hand.value:
+                    print(player.name, f"wins against dealer, {player.hand.value} to {self.dealer.hand.value}.")
+                else:
+                    print(player.name, f"loses against dealer, {player.hand.value} to {self.dealer.hand.value}.")
+                player.end_turn(self.dealer)
+
+        print(self)
+        while not confirm("May I clear the table so we can begin another round?"):
+            print("Okay, I'll let you look at things once again.")
+            print(self)
+
+        for player in self.present_players:
+            player.hand.discard_all()
+
+        self.phase = self.Phase.PRE_ROUND
 
     def initial_deal(self) -> Generator[None, None, None]:
-        self.phase = self.Phase.DEALING
 
         if len(self.dealer.hand) > 0 or any(len(player.hand) > 0 for player in self.active_players):
             raise RuntimeError(f"the initial deal has already started")
@@ -247,14 +383,18 @@ class BlackjackTable:
             yield
 
     def take_turns(self) -> None:
-        self.phase = self.Phase.PLAYER_TURN
+        self.phase = self.Phase.PLAYING
         for player in self.active_players:
             turn = player.take_turn()
             try:
                 next(turn)
                 print(self)
                 while True:
-                    turn.send(player.Actions(input(f"{player.name}, Hit or Stand: ").upper()))
+                    try:
+                        turn.send(player.Actions(input(f"{player.name}, Hit or Stand: ").upper()))
+                    except ValueError:
+                        print("Sorry, I didn't understand that.")
+                        continue
                     print(self)
             except StopIteration:
                 print(self)
@@ -267,25 +407,33 @@ class BlackjackTable:
             sleep(2)
 
     def __str__(self) -> str:
-        s = "Table:\n"
-        s += "\tDealer: " + ", ".join(f"{card:s}" for card in self.dealer.hand.cards) + "\n"
-        s += "\tPlayers:\n"
-        for player in self.present_players:
-            s += f"\t\t{player.name} (chips: {player.chips}, bet: {player.current_bet}): "
-            s += ", ".join(f"{card:s}" for card in player.hand.cards)
-            s += "\n"
+        return '\n'.join((
+            "Dealer:",
+            "" if self.dealer.hand.value == 0
+            else (f"    ({self.dealer.hand.value})" + ", ".join(f"{card:s}" for card in self.dealer.hand.cards)),
 
-        return s
+            *('\n'.join((
+                f"Seat {i}: " + "Empty" if player is None
+                else f"{player.name} (Chips: {player.chips}, Bet: {player.current_bet})",
+
+                "" if player is None or len(player.hand) == 0
+                else f"    ({player.hand.value}) {", ".join(f"{card:s}" for card in player.hand.cards)}"
+            )) for i, player in enumerate(self._players[1:], 1)
+
+            )))
+
+    def loop(self) -> None:
+        while True:
+            match self.phase:
+                case self.Phase.PRE_ROUND:
+                    self.pre_round()
+                case self.Phase.BETTING:
+                    self.start_betting()
+                case self.Phase.PLAYING:
+                    self.start_round()
+                case self.Phase.POST_ROUND:
+                    self.post_round()
 
 
 table = BlackjackTable()
-
-table.join_table(1, "Connor", 1000)
-
-table.start_betting()
-
-table.player(1).bet(100)
-
-table.start_round()
-
-print(table)
+table.loop()
