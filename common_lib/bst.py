@@ -155,7 +155,7 @@ class BSTNode[KT: Comparable, VT](MutableMapping[KT, VT]):
 
 
 class BST[KT: Comparable, VT](MutableMapping[KT, VT]):
-    Node = BSTNode
+    Node: type = BSTNode
 
     root: BSTNode[KT, VT] | None
 
@@ -200,18 +200,134 @@ class BST[KT: Comparable, VT](MutableMapping[KT, VT]):
             yield from reversed(self.root)
 
 
-class SimpleBST[T]:
-    class Node:
-        def __init__(self, value: T, left=None, right=None) -> None:
-            self.value: T = value
-class SimpleBST[T: Comparable]:
-    class Node[U]:
-        def __init__(self, value: U, left=None, right=None) -> None:
-            self.value: U = value
-            self.left: Self = left
-            self.right: Self = right
+class AVLNode[KT: Comparable, VT](BSTNode[KT, VT]):
+    __slots__ = '_skew'
 
-    root: Node[T] | None
+    _skew: int
+
+    @property
+    def skew(self) -> int:
+        if not hasattr(self, '_skew'):
+            self._skew = getattr(self.left, 'depth', -1) - getattr(self.right, 'depth', -1)
+
+        return self._skew
+
+    @skew.deleter
+    def skew(self) -> None:
+        del self._skew
+
+    def _clear_cache(self) -> None:
+        if hasattr(self, '_len'):
+            del self._len
+        if hasattr(self, '_dep'):
+            del self._dep
+        if hasattr(self, '_skew'):
+            del self._skew
+
+    @property
+    def _has_cache(self) -> bool:
+        return hasattr(self, '_skew') or hasattr(self, '_depth') or hasattr(self, '_len')
+
+    def __rshift__(self, n: int) -> Self:
+        """Performs a right rotation at this node n times. Returns the new root node."""
+        if n == 0:
+            return self
+        elif n < 0:
+            return self << -n
+        elif self.left is None:
+            raise ValueError(f"{n} right rotations remaining, but Node has no left child.")
+        else:
+            if self.skew * self.left.skew < 0:
+                self.left >>= 1
+            root = self.left
+            self.left = self.left.right
+            root.right = self
+            self._clear_cache()
+            root._clear_cache()
+            return root >> n - 1
+
+    def __lshift__(self, n: int) -> Self:
+        """Performs a left rotation at this node n times. Returns the new root node."""
+        if n == 0:
+            return self
+        elif n < 0:
+            return self >> -n
+        elif self.right is None:
+            raise ValueError(f"{n} left rotations remaining, but Node has no right child.")
+        else:
+            if self.skew * self.right.skew < 0:
+                self.right <<= 1
+            root = self.right
+            self.right = self.right.left
+            root.left = self
+            self._clear_cache()
+            root._clear_cache()
+            return root << n - 1
+
+    def rebalance_left(self) -> None:
+        skew = getattr(self.left, 'skew', 0)
+
+        if skew < -1:
+            self.left >>= -1 - self.left.skew  # type: ignore
+            self._clear_cache()
+        elif skew > 1:
+            self.left <<= self.left.skew - 1  # type: ignore
+            self._clear_cache()
+
+    def rebalance_right(self) -> None:
+        skew = getattr(self.right, 'skew', 0)
+
+        if skew < -1:
+            self.right >>= -1 - self.right.skew  # type: ignore
+            self._clear_cache()
+        elif skew > 1:
+            self.right <<= self.right.skew - 1  # type: ignore
+            self._clear_cache()
+
+    def __setitem__(self, key: KT, value: VT) -> None:
+        super().__setitem__(key, value)
+
+        if key < self.key:
+            self.rebalance_left()
+        elif key > self.key:
+            self.rebalance_right()
+
+    def __delitem__(self, key: KT, /) -> None:
+        super().__delitem__(key)
+
+        if key < self.key:
+            self.rebalance_left()
+        elif key > self.key:
+            self.rebalance_right()
+
+
+class AVL[KT: Comparable, VT](BST[KT, VT]):
+    Node: type = AVLNode
+
+    def __setitem__(self, key: KT, value: VT, /) -> None:
+        super().__setitem__(key, value)
+        skew = getattr(self.root, 'skew', 0)
+
+        if skew < -1:
+            self.root >>= -1 - skew  # type: ignore
+        elif skew > 1:
+            self.root <<= skew - 1  # type: ignore
+
+    def __delitem__(self, key: KT, /) -> None:
+        super().__delitem__(key)
+
+
+class SimpleNode[T]:
+    def __init__(self, value: T, left=None, right=None) -> None:
+        self.value: T = value
+        self.left: Self = left
+        self.right: Self = right
+
+
+class SimpleBST[T: Comparable]:
+    Node: type = SimpleNode
+
+    root: SimpleNode[T] | None
 
     def __init__(self):
         self.root = None
@@ -248,18 +364,20 @@ class SimpleBST[T: Comparable]:
                 else:
                     cur = cur.right
 
-    def delete(self, value: T) -> None:
-        cur = self
+    def delete(self: Self, value: T) -> None:
+        cur: Self | Node = self
         nxt_attr = 'root'
+
+        type Node = SimpleNode
 
         class NodeRef:
             @property
-            def ref(self) -> SimpleBST.Node:
+            def ref(self) -> Node:
                 nonlocal cur, nxt_attr
                 return getattr(cur, nxt_attr)
 
             @ref.setter
-            def ref(self, node: SimpleBST.Node) -> None:
+            def ref(self, node: Node) -> None:
                 nonlocal cur, nxt_attr
                 setattr(cur, nxt_attr, node)
 
@@ -272,19 +390,19 @@ class SimpleBST[T: Comparable]:
                 self.ref.value = value_
 
             @property
-            def left(self) -> SimpleBST.Node:
+            def left(self) -> Node:
                 return self.ref.left
 
             @left.setter
-            def left(self, node: SimpleBST.Node) -> None:
+            def left(self, node: Node) -> None:
                 self.ref.left = node
 
             @property
-            def right(self) -> SimpleBST.Node:
+            def right(self) -> Node:
                 return self.ref.right
 
             @right.setter
-            def right(self, node: SimpleBST.Node) -> None:
+            def right(self, node: Node) -> None:
                 self.ref.right = node
 
         nxt = NodeRef()
