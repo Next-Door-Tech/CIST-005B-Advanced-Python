@@ -1,13 +1,15 @@
 from typing import Self, Protocol, Optional, cast
 from collections.abc import MutableMapping, Generator
 
+__all__ = ['BSTMap', 'AVLMap']
+
 
 class Comparable(Protocol):
     def __lt__[T](self: T, other: T) -> bool:
         ...
 
 
-class BSTNode[KT: Comparable, VT](MutableMapping[KT, VT]):
+class BSTMapNode[KT: Comparable, VT](MutableMapping[KT, VT]):
     __slots__ = 'key', 'value', 'left', 'right', '_len', '_depth'
 
     _len: int
@@ -154,12 +156,12 @@ class BSTNode[KT: Comparable, VT](MutableMapping[KT, VT]):
             yield from reversed(self.left)
 
 
-class BST[KT: Comparable, VT](MutableMapping[KT, VT]):
-    Node: type = BSTNode
+class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
+    Node: type = BSTMapNode
 
-    root: BSTNode[KT, VT] | None
+    root: BSTMapNode[KT, VT] | None
 
-    def __init__(self, root: BSTNode[KT, VT] = None) -> None:
+    def __init__(self, root: BSTMapNode[KT, VT] = None) -> None:
         self.root = root
 
     def __getitem__(self, key: KT, /) -> VT:
@@ -200,7 +202,7 @@ class BST[KT: Comparable, VT](MutableMapping[KT, VT]):
             yield from reversed(self.root)
 
 
-class AVLNode[KT: Comparable, VT](BSTNode[KT, VT]):
+class AVLMapNode[KT: Comparable, VT](BSTMapNode[KT, VT]):
     __slots__ = '_skew'
 
     _skew: int
@@ -301,8 +303,8 @@ class AVLNode[KT: Comparable, VT](BSTNode[KT, VT]):
             self.rebalance_right()
 
 
-class AVL[KT: Comparable, VT](BST[KT, VT]):
-    Node: type = AVLNode
+class AVLMap[KT: Comparable, VT](BSTMap[KT, VT]):
+    Node: type = AVLMapNode
 
     def __setitem__(self, key: KT, value: VT, /) -> None:
         super().__setitem__(key, value)

@@ -4,7 +4,7 @@ from collections.abc import Generator
 from itertools import islice
 
 from common_lib.containers import LinkedQueue
-from common_lib.bst import BST
+from common_lib.bst import BSTMap
 from common_lib.hash_table import HashTable
 
 
@@ -41,7 +41,7 @@ def gen_animals() -> Generator[Animal, None, None]:
         yield Animal(name, choice(species), randint(1, 10))
 
 
-class CarePriorityQueue(BST[int, LinkedQueue[Animal]]):
+class CarePriorityQueue(BSTMap[int, LinkedQueue[Animal]]):
     def __init__(self) -> None:
         super().__init__()
 
