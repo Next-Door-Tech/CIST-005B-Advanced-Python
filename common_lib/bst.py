@@ -4,7 +4,9 @@ from collections.abc import Collection, Sequence, MutableSet, MutableMapping, Ge
 from itertools import chain
 from copy import copy, deepcopy
 
-__all__ = ['BSTList', 'BSTMap', 'AVLList', 'AVLMap']
+from common_lib.containers import _CommonMethods
+
+__all__ = ['BST', 'BSTSet', 'BSTMap', 'AVL', 'AVLSet', 'AVLMap']
 
 
 @runtime_checkable
@@ -37,6 +39,10 @@ class BSTNodeBase[T: Comparable](Collection[T]):
 
     _left: Self
     _right: Self
+
+    class _DeleteMe(Exception):
+        """Signals to the parent node that this node should be deleted."""
+        pass
 
     def __init__(self, key: T, left: Optional[Self] = None, right: Optional[Self] = None) -> None:
         self.key: T = key
@@ -258,78 +264,314 @@ class BSTNodeBase[T: Comparable](Collection[T]):
         return new
 
 
+class BSTBase[T: Comparable](Collection[T], ABC):
+    @abstractmethod
+    class Node[T_](BSTNodeBase[T_]):
+        ...
 
+    _root: Node
 
+    @property
+    def has_root(self) -> bool:
+        return hasattr(self, 'root')
 
+    @property
+    def root(self) -> Node[T]:
+        return self._root
 
-class BSTMapNode[KT: Comparable, VT](MutableMapping[KT, VT], BSTNode[KT]):
-    __slots__ = 'value'
+    @root.setter
+    def root(self, node: Node[T]) -> None:
+        self._root = node
 
-    _len: int
-    _depth: int
+    @root.deleter
+    def root(self) -> None:
+        try:
+            if not self.root.has_right:
+                self.root = self.root.left
+            else:
+                self.root = self.root.pop_lrc()
+        except* MissingChildError:
+            del self._root
 
-    def __init__(self, key: KT, value: VT, left: Optional[Self] = None, right: Optional[Self] = None) -> None:
-        super().__init__(key, left, right)
-        self.value: VT = value
-
-    def __getitem__(self, key: KT, /) -> VT:
-        if key is self.key or key == self.key:
-            return self.value
-        elif key < self.key and self.has_left:
-            return self.left[key]
-        elif self.has_right:
-            return self.right[key]
+    def __len__(self) -> int:
+        if self.root is not None:
+            return len(self.root)
         else:
-            raise KeyError(key)
+            return 0
 
-    def __setitem__(self, key: KT, value: VT) -> None:
-        if key is self.key or key == self.key:
-            self.value = value
-        else:
-            if key < self.key:
-                if self.has_left:
-                    self.left[key] = value
-                    if not self.left._has_cache:
-                        self._clear_cache()
-                else:
-                    self.left = cast(Self, type(self)(key, value))
+    def __iter__(self) -> Generator[T, None, None]:
+        if self.root is not None:
+            yield from self.root
+
+    def __reversed__(self) -> Generator[T, None, None]:
+        if self.root is not None:
+            yield from reversed(self.root)
+
+    def __contains__(self, key: object) -> bool:
+        return hasattr(self, 'root') and key in self.root
+
+
+class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
+    class Node[T_: Comparable](Sequence[T_], BSTNodeBase[T_], _CommonMethods[T_]):
+        @property
+        def node_index(self) -> int:
+            return getattr(self.left, 'len', 0)
+
+        @overload
+        def __getitem__(self, index: int, /, *, recursive: bool = False) -> T_:
+            ...
+
+        @overload
+        def __getitem__(self, index: slice, /, *, recursive: Literal[False] = False) -> list[T_]:  # noqa
+            ...
+
+        @overload
+        def __getitem__(self, index: slice, /, *, recursive: Literal[True]) -> Iterable[T_]:  # noqa
+            ...
+
+        def __getitem__(self, index: int | slice, /, *, recursive: bool = False) -> T_ | list[T_] | Iterable[T_]:
+            if not recursive:
+                self._check_index(index)
+                if isinstance(index, int):
+                    index %= len(self)
+
+            match index:
+                case int(i):
+                    if i < self.node_index:
+                        return self.left.__getitem__(i, recursive=True)
+                    elif i == self.node_index:
+                        return self.key
+                    else:
+                        return self.right.__getitem__(i - self.node_index, recursive=True)
+                case slice() as s:
+                    if not recursive:
+                        return list(self.__getitem__(s, recursive=True))
+
+                    indices = range(len(self))[s]
+
+                    if not indices:
+                        return ()
+
+                    s = slice(indices.start, indices.stop, indices.step)
+
+                    if range(self.node_index)[s] and self.has_left:
+                        left = self.left.__getitem__(s, recursive=True)
+                    else:
+                        left = ()
+
+                    if self.node_index in indices:
+                        center = (self.key,)
+                    else:
+                        center = ()
+
+                    if self.has_right:
+                        r = range(-self.node_index - 1, len(self.right))[s]
+                        right = self.right.__getitem__(slice(r.start, r.stop, r.step), recursive=True)
+                    else:
+                        right = ()
+
+                    if s.step > 0:
+                        return chain(left, center, right)
+                    else:
+                        return chain(right, center, left)
+
+        def __delitem__(self, index: int | slice, /, *, recursive: bool = False) -> None:
+            if not recursive:
+                self._check_index(index)
+                if isinstance(index, int):
+                    index %= len(self)
+
+            match index:
+                case int(i):
+                    if i == self.node_index:
+                        raise self._DeleteMe
+                    elif i < self.node_index:
+                        try:
+                            self.left.__delitem__(i, recursive=True)
+                        except self._DeleteMe:
+                            del self.left
+                    else:
+                        try:
+                            self.right.__delitem__(i - self.node_index, recursive=True)
+                        except self._DeleteMe:
+                            del self.right
+                case slice() as s:
+                    if s.step < 0:
+                        indices = range(len(self))[s][::-1]
+                    else:
+                        indices = range(len(self))[s]
+
+                    if not indices:
+                        return
+
+                    s = slice(indices.start, indices.stop, indices.step)
+
+                    if range(self.node_index)[s] and self.has_left:
+                        try:
+                            self.left.__delitem__(s, recursive=True)
+                        except self._DeleteMe:
+                            del self.left
+
+                    if self.has_right:
+                        r = range(-self.node_index - 1, len(self.right))[s]
+                        try:
+                            self.right.__delitem__(slice(r.start, r.stop, r.step), recursive=True)
+                        except self._DeleteMe:
+                            del self.right
+
                     self._clear_cache()
-            else:
-                if self.has_right:
-                    self.right[key] = value
-                    if not self.right._has_cache:
-                        self._clear_cache()
-                else:
-                    self.right = cast(Self, type(self)(key, value))
-                    self._clear_cache()
 
-    def __delitem__(self, key: KT, /) -> None:
-        if key is self.key or key == self.key:
-            raise RuntimeError(
-                f"del {self.__class__.__qualname__}[{key}] cannot be called from Node to be deleted")
-        elif key < self.key and self.has_left:
-            if key is self.left.key or key == self.left.key:
-                del self.left
+                    if self.node_index in indices:
+                        raise self._DeleteMe
+
+    def __init__(self, root: Node[T] = None) -> None:
+        if root is not None:
+            self.root = root
+
+    @property
+    def has_root(self) -> bool:
+        return hasattr(self, 'root')
+
+    @property
+    def root(self) -> Node[T]:
+        return self._root
+
+    @root.setter
+    def root(self, node: Node[T]) -> None:
+        self._root = node
+
+    @root.deleter
+    def root(self) -> None:
+        try:
+            if not self.root.has_right:
+                self.root = self.root.left
             else:
-                del self.left[key]
-        elif self.has_right:
-            if key is self.right.key or key == self.right.key:
-                del self.right
-            else:
-                del self.right[key]
+                self.root = self.root.pop_lrc()
+        except* MissingChildError:
+            del self._root
+
+    @overload
+    def __getitem__(self, index: int) -> T:
+        ...
+
+    @overload
+    def __getitem__(self, index: slice) -> list[T]:
+        ...
+
+    def __getitem__(self, index: int | slice) -> T | list[T]:
+        self._check_index(index)
+        return self.root[index]
+
+    def __delitem__(self, index: int | slice) -> None:
+        try:
+            del self.root[index]
+        except self.Node._DeleteMe:
+            del self.root
+
+    def __len__(self) -> int:
+        if self.root is not None:
+            return len(self.root)
         else:
-            raise KeyError(key)
+            return 0
 
-        self._clear_cache()
+    def __iter__(self) -> Generator[T, None, None]:
+        if self.root is not None:
+            yield from self.root
+
+    def __reversed__(self) -> Generator[T, None, None]:
+        if self.root is not None:
+            yield from reversed(self.root)
+
+    def __contains__(self, key: object) -> bool:
+        return hasattr(self, 'root') and key in self.root
 
 
 class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
-    Node: type = BSTMapNode
+    class Node[KT_: Comparable, VT_](MutableMapping[KT_, VT_], BSTNodeBase[KT_]):
+        __slots__ = 'value'
 
-    root: BSTMapNode[KT, VT] | None
+        _len: int
+        _depth: int
 
-    def __init__(self, root: BSTMapNode[KT, VT] = None) -> None:
-        self.root = root
+        def __init__(self, key: KT_, value: VT_, left: Optional[Self] = None, right: Optional[Self] = None) -> None:
+            super().__init__(key, left, right)
+            self.value: VT_ = value
+
+        def __getitem__(self, key: KT_, /) -> VT_:
+            if key is self.key or key == self.key:
+                return self.value
+            elif key < self.key and self.has_left:
+                return self.left[key]
+            elif self.has_right:
+                return self.right[key]
+            else:
+                raise KeyError(key)
+
+        def __setitem__(self, key: KT_, value: VT_) -> None:
+            if key is self.key or key == self.key:
+                self.value = value
+            else:
+                if key < self.key:
+                    if self.has_left:
+                        self.left[key] = value
+                        if not self.left._has_cache:
+                            self._clear_cache()
+                    else:
+                        self.left = cast(Self, type(self)(key, value))
+                        self._clear_cache()
+                else:
+                    if self.has_right:
+                        self.right[key] = value
+                        if not self.right._has_cache:
+                            self._clear_cache()
+                    else:
+                        self.right = cast(Self, type(self)(key, value))
+                        self._clear_cache()
+
+        def __delitem__(self, key: KT_, /) -> None:
+            if key is self.key or key == self.key:
+                raise RuntimeError(
+                    f"del {self.__class__.__qualname__}[{key}] cannot be called from Node to be deleted")
+            elif key < self.key and self.has_left:
+                if key is self.left.key or key == self.left.key:
+                    del self.left
+                else:
+                    del self.left[key]
+            elif self.has_right:
+                if key is self.right.key or key == self.right.key:
+                    del self.right
+                else:
+                    del self.right[key]
+            else:
+                raise KeyError(key)
+
+            self._clear_cache()
+
+    def __init__(self, root: Node[KT, VT] = None) -> None:
+        if root is not None:
+            self.root = root
+
+    @property
+    def has_root(self) -> bool:
+        return hasattr(self, 'root')
+
+    @property
+    def root(self) -> Node[KT, VT]:
+        return self._root
+
+    @root.setter
+    def root(self, node: Node[KT, VT]) -> None:
+        self._root = node
+
+    @root.deleter
+    def root(self) -> None:
+        try:
+            if not self.root.has_right:
+                self.root = self.root.left
+            else:
+                self.root = self.root.pop_lrc()
+        except* MissingChildError:
+            del self._root
 
     def __getitem__(self, key: KT, /) -> VT:
         if self.root is None:
@@ -348,7 +590,7 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
             raise KeyError(key)
         elif key is self.root.key or key == self.root.key:
             try:
-                self.root.value = self.root.pop_lrc()
+                self.root = self.root.pop_lrc()
             except NoRightChildError:
                 self.root = self.root.left
         else:
