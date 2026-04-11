@@ -14,6 +14,9 @@ class Comparable(Protocol):
     def __lt__[T](self: T, other: T) -> bool:
         ...
 
+    def __eq__[T](self: T, other: T) -> bool:
+        ...
+
 
 class MissingChildError(AttributeError):
     """Attempted to access a child node which is not set."""
@@ -574,19 +577,19 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
             del self._root
 
     def __getitem__(self, key: KT, /) -> VT:
-        if self.root is None:
-            raise KeyError(key)
-        else:
+        if self.has_root:
             return self.root[key]
+        else:
+            raise KeyError(key)
 
     def __setitem__(self, key: KT, value: VT, /) -> None:
-        if self.root is None:
-            self.root = self.Node(key, value)
-        else:
+        if self.has_root:
             self.root[key] = value
+        else:
+            self.root = self.Node(key, value)
 
     def __delitem__(self, key: KT, /) -> None:
-        if self.root is None:
+        if not self.has_root:
             raise KeyError(key)
         elif key is self.root.key or key == self.root.key:
             try:
@@ -597,17 +600,17 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
             del self.root[key]
 
     def __len__(self) -> int:
-        if self.root is not None:
+        if self.has_root:
             return len(self.root)
         else:
             return 0
 
     def __iter__(self) -> Generator[KT, None, None]:
-        if self.root is not None:
+        if self.has_root:
             yield from self.root
 
     def __reversed__(self) -> Generator[KT, None, None]:
-        if self.root is not None:
+        if self.has_root:
             yield from reversed(self.root)
 
 
