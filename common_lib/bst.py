@@ -28,7 +28,7 @@ class NoLeftChildError(MissingChildError):
 LeafNodeError = ExceptionGroup("Node has no children.", [NoLeftChildError(), NoRightChildError()])
 
 
-class BSTNode[T: Comparable](Collection[T]):
+class BSTNodeBase[T: Comparable](Collection[T]):
     __slots__ = 'key', '_left', '_right', '_len', '_depth'
 
     _len: int
