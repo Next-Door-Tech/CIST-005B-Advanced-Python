@@ -369,33 +369,8 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
             yield from reversed(self.root)
 
 
-class AVLMapNode[KT: Comparable, VT](BSTMapNode[KT, VT]):
-    __slots__ = '_skew'
-
-    _skew: int
-
-    @property
-    def skew(self) -> int:
-        if not hasattr(self, '_skew'):
-            self._skew = getattr(self.left, 'depth', -1) - getattr(self.right, 'depth', -1)
-
-        return self._skew
-
-    @skew.deleter
-    def skew(self) -> None:
-        del self._skew
-
-    def _clear_cache(self) -> None:
-        if hasattr(self, '_len'):
-            del self._len
-        if hasattr(self, '_dep'):
-            del self._dep
-        if hasattr(self, '_skew'):
-            del self._skew
-
-    @property
-    def _has_cache(self) -> bool:
-        return hasattr(self, '_skew') or hasattr(self, '_depth') or hasattr(self, '_len')
+class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
+    __slots__ = ()
 
     def __rshift__(self, n: int) -> Self:
         """Performs a right rotation at this node n times. Returns the new root node."""
@@ -437,54 +412,58 @@ class AVLMapNode[KT: Comparable, VT](BSTMapNode[KT, VT]):
         skew = getattr(self.left, 'skew', 0)
 
         if skew < -1:
-            self.left >>= -1 - self.left.skew  # type: ignore
-            self._clear_cache()
+            self.left >>= -1 - self.left.skew
         elif skew > 1:
-            self.left <<= self.left.skew - 1  # type: ignore
-            self._clear_cache()
+            self.left <<= self.left.skew - 1
 
     def rebalance_right(self) -> None:
         skew = getattr(self.right, 'skew', 0)
 
         if skew < -1:
-            self.right >>= -1 - self.right.skew  # type: ignore
-            self._clear_cache()
+            self.right >>= -1 - self.right.skew
         elif skew > 1:
-            self.right <<= self.right.skew - 1  # type: ignore
-            self._clear_cache()
-
-    def __setitem__(self, key: KT, value: VT) -> None:
-        super().__setitem__(key, value)
-
-        if key < self.key:
-            self.rebalance_left()
-        elif key > self.key:
-            self.rebalance_right()
-
-    def __delitem__(self, key: KT, /) -> None:
-        super().__delitem__(key)
-
-        if key < self.key:
-            self.rebalance_left()
-        elif key > self.key:
-            self.rebalance_right()
+            self.right <<= self.right.skew - 1
 
 
 class AVLMap[KT: Comparable, VT](BSTMap[KT, VT]):
-    Node: type = AVLMapNode
+    class Node[KT_: Comparable, VT_](AVLNodeBase[KT_], BSTMap.Node[KT_, VT_]):
+        __slots__ = ()
+
+        def __setitem__(self, key: KT_, value: VT_) -> None:
+            super().__setitem__(key, value)
+
+            if key < self.key:
+                self.rebalance_left()
+            elif key > self.key:
+                self.rebalance_right()
+
+        def __delitem__(self, key: KT_, /) -> None:
+            super().__delitem__(key)
+
+            if key < self.key:
+                self.rebalance_left()
+            elif key > self.key:
+                self.rebalance_right()
+
+    root: Node[KT, VT]
 
     def __setitem__(self, key: KT, value: VT, /) -> None:
         super().__setitem__(key, value)
         skew = getattr(self.root, 'skew', 0)
 
         if skew < -1:
-            self.root >>= -1 - skew  # type: ignore
+            self.root >>= -1 - skew
         elif skew > 1:
-            self.root <<= skew - 1  # type: ignore
+            self.root <<= skew - 1
 
     def __delitem__(self, key: KT, /) -> None:
         super().__delitem__(key)
+        skew = getattr(self.root, 'skew', 0)
 
+        if skew < -1:
+            self.root >>= (-1 - skew)
+        elif skew > 1:
+            self.root <<= skew - 1
 
 # class SimpleNode[T: Comparable]:
 #     def __init__(self, value: T, left: Self | None = None, right: Self | None = None) -> None:
