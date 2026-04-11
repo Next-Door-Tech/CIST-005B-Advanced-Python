@@ -29,10 +29,11 @@ LeafNodeError = ExceptionGroup("Node has no children.", [NoLeftChildError(), NoR
 
 
 class BSTNodeBase[T: Comparable](Collection[T]):
-    __slots__ = 'key', '_left', '_right', '_len', '_depth'
+    __slots__ = 'key', '_left', '_right', '_len', '_depth', '_skew'
 
     _len: int
     _depth: int
+    _skew: int
 
     _left: Self
     _right: Self
@@ -57,6 +58,7 @@ class BSTNodeBase[T: Comparable](Collection[T]):
     @left.setter
     def left(self, node: Self) -> None:
         self._left = node
+        self._clear_cache()
 
     @left.deleter
     def left(self) -> None:
@@ -83,6 +85,7 @@ class BSTNodeBase[T: Comparable](Collection[T]):
     @right.setter
     def right(self, node: Self) -> None:
         self._right = node
+        self._clear_cache()
 
     @right.deleter
     def right(self) -> None:
@@ -146,14 +149,38 @@ class BSTNodeBase[T: Comparable](Collection[T]):
         del self._depth
 
     @property
-    def _has_cache(self) -> bool:
-        return hasattr(self, '_depth') or hasattr(self, '_len')
+    def skew(self) -> int:
+        if not hasattr(self, '_skew'):
+            self._skew = getattr(self.left, 'depth', -1) - getattr(self.right, 'depth', -1)
+
+        return self._skew
+
+    @skew.deleter
+    def skew(self) -> None:
+        del self._skew
+
+    @property
+    def len(self) -> int:
+        if not hasattr(self, '_len'):
+            self._len = 1 + (self.has_left and len(self.left)) + (self.has_right and len(self.right))
+
+        return self._len
+
+    @len.deleter
+    def len(self) -> None:
+        del self._len
 
     def _clear_cache(self) -> None:
         if hasattr(self, '_len'):
             del self._len
         if hasattr(self, '_depth'):
             del self._depth
+        if hasattr(self, '_skew'):
+            del self._skew
+
+    @property
+    def _has_cache(self) -> bool:
+        return hasattr(self, '_depth') or hasattr(self, '_skew') or hasattr(self, '_len')
 
     @property
     def is_leaf(self) -> bool:
@@ -170,10 +197,7 @@ class BSTNodeBase[T: Comparable](Collection[T]):
             return self.has_right and key in self.right
 
     def __len__(self) -> int:
-        if not hasattr(self, '_len'):
-            self._len = 1 + (self.has_left and len(self.left)) + (self.has_right and len(self.right))
-
-        return self._len
+        return self.len
 
     def __iter__(self) -> Generator[T, None, None]:
         if self.has_left:
