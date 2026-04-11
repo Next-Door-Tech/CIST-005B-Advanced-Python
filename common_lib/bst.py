@@ -1,5 +1,8 @@
-from typing import Self, Protocol, Optional, cast, runtime_checkable
-from collections.abc import Collection, MutableMapping, Generator
+from abc import ABC, abstractmethod
+from typing import Self, Protocol, runtime_checkable, Optional, cast, overload, Literal
+from collections.abc import Collection, Sequence, MutableSet, MutableMapping, Generator, Iterable
+from itertools import chain
+from copy import copy, deepcopy
 
 __all__ = ['BSTList', 'BSTMap', 'AVLList', 'AVLMap']
 
@@ -185,6 +188,54 @@ class BSTNode[T: Comparable](Collection[T]):
         yield self.key
         if self.has_left:
             yield from reversed(self.left)
+
+    def __copy__(self) -> Self:
+        new: Self = object.__new__(type(self))
+
+        for cls in type(self).__mro__:
+            try:
+                slots = cls.__slots__
+                if isinstance(slots, str):
+                    slots = cls.__slots__.split()
+                for attr in slots:
+                    try:
+                        setattr(new, attr, getattr(self, attr))
+                    except AttributeError:
+                        continue
+            except AttributeError:
+                continue
+
+        if new.has_left:
+            new._left = copy(new.left)
+        if new.has_right:
+            new._right = copy(new.right)
+
+        return new
+
+    def __deepcopy__(self, memo) -> Self:
+        if id(self) in memo:
+            return memo[id(self)]
+
+        new: Self = object.__new__(type(self))
+
+        memo[id(self)] = new
+        for cls in type(self).__mro__:
+            try:
+                slots = cls.__slots__
+                if isinstance(slots, str):
+                    slots = cls.__slots__.split()
+                for attr in slots:
+                    try:
+                        setattr(new, attr, deepcopy(getattr(self, attr), memo))
+                    except AttributeError:
+                        continue
+            except AttributeError:
+                continue
+        return new
+
+
+
+
 
 
 class BSTMapNode[KT: Comparable, VT](MutableMapping[KT, VT], BSTNode[KT]):
