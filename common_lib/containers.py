@@ -31,13 +31,13 @@ class _CommonMethods[T](Collection[T], ABC):
             case int() if -len(self) <= index < len(self):
                 return index
             case int():
-                raise IndexError(f"{type(self)} index out of range")
+                raise IndexError(f"{type(self).__qualname__} index out of range")
             case _ if int_only:
-                raise TypeError(f"{type(self)} indices must be integers, not '{type(index)}'")
+                raise TypeError(f"{type(self).__qualname__} indices must be integers, not '{type(index)}'")
             case slice():
                 return self._slice_indices(index)
             case _:
-                raise TypeError(f"{type(self)} indices must be integers or slices, not '{type(index)}'")
+                raise TypeError(f"{type(self).__qualname__} indices must be integers or slices, not '{type(index)}'")
 
     @overload
     def _check_index_inclusive(self, index: int, *, int_only: bool = False) -> int:
