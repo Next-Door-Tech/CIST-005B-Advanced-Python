@@ -682,14 +682,6 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
         else:
             return 0
 
-    def __iter__(self) -> Generator[T, None, None]:
-        if self.root is not None:
-            yield from self.root
-
-    def __reversed__(self) -> Generator[T, None, None]:
-        if self.root is not None:
-            yield from reversed(self.root)
-
     def __contains__(self, key: object) -> bool:
         return hasattr(self, 'root') and key in self.root
 
