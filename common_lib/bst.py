@@ -368,8 +368,8 @@ class BSTBase[T: Comparable](Collection[T], ABC):
             return 0
 
 
-class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
-    class Node[T_: Comparable](Sequence[T_], BSTNodeBase[T_], _CommonMethods[T_]):
+class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
+    class Node[T_: Comparable](BSTNodeBase[T_], _CommonMethods[T_], Sequence[T_]):
         @property
         def value(self) -> T_:
             return self.key
@@ -748,8 +748,8 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
             return f"{type(self).__name__}()"
 
 
-class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
-    class Node[KT_: Comparable, VT_](MutableMapping[KT_, VT_], BSTNodeBase[KT_]):
+class BSTMap[KT: Comparable, VT](BSTBase[KT], MutableMapping[KT, VT]):
+    class Node[KT_: Comparable, VT_](BSTNodeBase[KT_], MutableMapping[KT_, VT_]):
         __slots__ = 'value'
 
         _len: int
