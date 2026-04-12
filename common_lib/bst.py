@@ -738,6 +738,12 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
         except AttributeError:
             raise IndexError from None
 
+    def __str__(self) -> str:
+        return f"[{', '.join(str(val) for val in self)}]"
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}([{', '.join(repr(val) for val in self)}])"
+
 
 class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
     class Node[KT_: Comparable, VT_](MutableMapping[KT_, VT_], BSTNodeBase[KT_]):
