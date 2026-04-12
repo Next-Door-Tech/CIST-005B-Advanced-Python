@@ -1015,6 +1015,27 @@ class AVLSeq[T](AVLBase[T], BSTSeq[T]):
     class Node[T_](AVLNodeBase[T_], BSTSeq.Node[T_]):
         __slots__ = ()
 
+        def add(self, value: T_) -> None:
+            super().add(value)
+            self.rebalance_on_key(value)
+
+        def discard(self, value: T_) -> None:
+            super().discard(value)
+            self.rebalance_on_key(value)
+
+        def remove(self, value: T_) -> None:
+            super().remove(value)
+            self.rebalance_on_key(value)
+
+        def pop(self, index: int = 0) -> T_:
+            node_index = self.node_index
+            value = super().pop(index)
+            if index < node_index:
+                self.rebalance_left()
+            elif index > node_index:
+                self.rebalance_right()
+            return value
+
     def __delitem__(self, index: int | slice) -> None:
         super().__delitem__(index)
         self.rebalance()
