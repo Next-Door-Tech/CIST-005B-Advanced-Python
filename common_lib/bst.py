@@ -742,7 +742,10 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
         return f"[{', '.join(str(val) for val in self)}]"
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}([{', '.join(repr(val) for val in self)}])"
+        if len(self):
+            return f"{type(self).__name__}([{', '.join(repr(val) for val in self)}])"
+        else:
+            return f"{type(self).__name__}()"
 
 
 class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
