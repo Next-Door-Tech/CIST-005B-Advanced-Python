@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Self, Protocol, runtime_checkable, Optional, cast, overload, Literal
-from collections.abc import Collection, Sequence, MutableSet, MutableMapping, Generator, Iterable
+from collections.abc import Collection, Sequence, MutableSet, MutableMapping, Generator, Iterable, Mapping
 from itertools import chain
 from copy import copy, deepcopy
 
@@ -335,18 +335,18 @@ class BSTBase[T: Comparable](Collection[T], ABC):
             del self._root
 
     def __len__(self) -> int:
-        if self.root is not None:
+        if self.has_root:
             return len(self.root)
         else:
             return 0
 
     def __iter__(self) -> Generator[T, None, None]:
-        if self.root is not None:
+        if self.has_root:
             for node in self.root:
                 yield node.key
 
     def __reversed__(self) -> Generator[T, None, None]:
-        if self.root is not None:
+        if self.has_root:
             for node in reversed(self.root):
                 yield node.key
 
@@ -683,7 +683,7 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
             del self.root
 
     def __len__(self) -> int:
-        if self.root is not None:
+        if self.has_root:
             return len(self.root)
         else:
             return 0
