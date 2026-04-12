@@ -840,6 +840,12 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
                     self[key] = value
             except ValueError as e:
                 try:
+                    # noinspection PyUnboundLocalVariable
+                    i
+                except NameError:
+                    i = 0
+
+                try:
                     if "values to unpack" in e.args[0]:
                         raise ValueError(f"Iterable element #{i} has incorrect length; 2 is required") from e
                 except AttributeError:
