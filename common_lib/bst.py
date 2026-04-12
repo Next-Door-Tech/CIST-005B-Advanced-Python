@@ -920,10 +920,13 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
             return 0
 
     def __str__(self) -> str:
-        return '{' + ', '.join(f'str({key}): {self[key]}' for key in self) + '}'
+        return '{' + ', '.join(f'{key!s}: {self[key]!s}' for key in self) + '}'
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}({'{' + ', '.join(f'str({key}): {self[key]}' for key in self) + '}'})"
+        if len(self):
+            return f"{type(self).__name__}({'{' + ', '.join(f'{key!r}: {self[key]!r}' for key in self) + '}'})"
+        else:
+            return f"{type(self).__name__}()"
 
 
 class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
