@@ -942,7 +942,7 @@ class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
             raise ValueError(f"{n} right rotations remaining, but Node has no left child.")
         else:
             if self.skew * self.left.skew < 0:
-                self.left >>= 1
+                self.left <<= 1
             root = self.left
             try:
                 self.left = self.left.right
@@ -963,7 +963,7 @@ class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
             raise ValueError(f"{n} left rotations remaining, but Node has no right child.")
         else:
             if self.skew * self.right.skew < 0:
-                self.right <<= 1
+                self.right >>= 1
             root = self.right
             try:
                 self.right = self.right.left
