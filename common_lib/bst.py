@@ -306,6 +306,12 @@ class BSTBase[T: Comparable](Collection[T], ABC):
 
     _root: Node
 
+    @classmethod
+    def from_node(cls, node: Node) -> Self:
+        new = cls()
+        new._root = node
+        return new
+
     @property
     def has_root(self) -> bool:
         return hasattr(self, 'root')
