@@ -6,7 +6,7 @@ from copy import copy, deepcopy
 
 from common_lib.containers import _CommonMethods
 
-__all__ = ['BST', 'BSTSet', 'BSTMap', 'AVL', 'AVLSet', 'AVLMap']
+__all__ = ['BSTSeq', 'BSTSet', 'BSTMap', 'AVLSeq', 'AVLSet', 'AVLMap']
 
 
 @runtime_checkable
@@ -33,8 +33,10 @@ class NoLeftChildError(MissingChildError):
 LeafNodeError = ExceptionGroup("Node has no children.", [NoLeftChildError(), NoRightChildError()])
 
 
-class BSTNodeBase[T: Comparable](Collection[T]):
+class BSTNodeBase[T: Comparable](Collection[T], ABC):
     __slots__ = 'key', '_left', '_right', '_len', '_depth', '_skew'
+
+    key: T
 
     _len: int
     _depth: int
@@ -43,8 +45,8 @@ class BSTNodeBase[T: Comparable](Collection[T]):
     _left: Self
     _right: Self
 
-    class _DeleteMe(Exception):
-        """Signals to the parent node that this node should be deleted."""
+    class DeleteMe(Exception):
+        """Signals to the parent node that this node should be deleted upon return."""
         pass
 
     def __init__(self, key: T, left: Optional[Self] = None, right: Optional[Self] = None) -> None:
@@ -149,7 +151,17 @@ class BSTNodeBase[T: Comparable](Collection[T]):
     @property
     def depth(self) -> int:
         if not hasattr(self, '_depth'):
-            self._depth = 1 + max(getattr(self.left, 'depth', -1), getattr(self.right, 'depth', -1))
+            try:
+                left = self.left.depth
+            except NoLeftChildError:
+                left = -1
+
+            try:
+                right = self.right.depth
+            except NoRightChildError:
+                right = -1
+
+            self._depth = 1 + max(left, right)
 
         return self._depth
 
@@ -160,7 +172,17 @@ class BSTNodeBase[T: Comparable](Collection[T]):
     @property
     def skew(self) -> int:
         if not hasattr(self, '_skew'):
-            self._skew = getattr(self.left, 'depth', -1) - getattr(self.right, 'depth', -1)
+            try:
+                left = self.left.depth
+            except NoLeftChildError:
+                left = -1
+
+            try:
+                right = self.right.depth
+            except NoRightChildError:
+                right = -1
+
+            self._skew = left - right
 
         return self._skew
 
@@ -313,9 +335,31 @@ class BSTBase[T: Comparable](Collection[T], ABC):
     def __contains__(self, key: object) -> bool:
         return hasattr(self, 'root') and key in self.root
 
+    @property
+    def depth(self) -> int:
+        if self.has_root:
+            return self.root.depth
+        else:
+            return -1
+
+    @property
+    def skew(self) -> int:
+        if self.has_root:
+            return self.root.skew
+        else:
+            return 0
+
 
 class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
     class Node[T_: Comparable](Sequence[T_], BSTNodeBase[T_], _CommonMethods[T_]):
+        @property
+        def value(self) -> T_:
+            return self.key
+
+        @value.setter
+        def value(self, value: T_) -> None:
+            self.key = value
+
         @property
         def node_index(self) -> int:
             return getattr(self.left, 'len', 0)
@@ -387,16 +431,16 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
             match index:
                 case int(i):
                     if i == self.node_index:
-                        raise self._DeleteMe
+                        raise self.DeleteMe
                     elif i < self.node_index:
                         try:
                             self.left.__delitem__(i, recursive=True)
-                        except self._DeleteMe:
+                        except self.DeleteMe:
                             del self.left
                     else:
                         try:
                             self.right.__delitem__(i - self.node_index, recursive=True)
-                        except self._DeleteMe:
+                        except self.DeleteMe:
                             del self.right
                 case slice() as s:
                     if s.step < 0:
@@ -412,24 +456,173 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
                     if range(self.node_index)[s] and self.has_left:
                         try:
                             self.left.__delitem__(s, recursive=True)
-                        except self._DeleteMe:
+                        except self.DeleteMe:
                             del self.left
 
                     if self.has_right:
                         r = range(-self.node_index - 1, len(self.right))[s]
                         try:
                             self.right.__delitem__(slice(r.start, r.stop, r.step), recursive=True)
-                        except self._DeleteMe:
+                        except self.DeleteMe:
                             del self.right
 
                     self._clear_cache()
 
                     if self.node_index in indices:
-                        raise self._DeleteMe
+                        raise self.DeleteMe
 
-    def __init__(self, root: Node[T] = None) -> None:
-        if root is not None:
-            self.root = root
+        def add(self, value: T_) -> None:
+            if value == self.value:
+                return
+            elif value < self.value:
+                if self.has_left:
+                    self.left.add(value)
+                else:
+                    self.left = type(self)(value)
+
+                if not self.left._has_cache:
+                    self._clear_cache()
+            else:
+                if self.has_right:
+                    self.right.add(value)
+                else:
+                    self.right = type(self)(value)
+
+                if not self.right._has_cache:
+                    self._clear_cache()
+
+        def discard(self, value: T_) -> None:
+            """Remove a member. Do not raise an exception if absent."""
+            if value == self.value:
+                raise self.DeleteMe
+
+            elif value < self.value:
+                if self.has_left:
+                    try:
+                        self.left.discard(value)
+                        if not self.left._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.left
+                        self._clear_cache()
+            else:
+                if self.has_right:
+                    try:
+                        self.right.discard(value)
+                        if not self.right._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.right
+                        self._clear_cache()
+
+        def remove(self, value: T_) -> None:
+            """Remove a member. Do raise ValueError if absent."""
+            if value == self.value:
+                raise self.DeleteMe
+
+            elif value < self.value:
+                if self.has_left:
+                    try:
+                        self.left.discard(value)
+                        if not self.left._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.left
+                        self._clear_cache()
+                else:
+                    raise ValueError
+
+            else:
+                if self.has_right:
+                    try:
+                        self.right.discard(value)
+                        if not self.right._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.right
+                        self._clear_cache()
+                else:
+                    raise ValueError
+
+        def index(self, value: T_, start: Optional[int] = 0, stop: Optional[int] = None) -> int:
+            if start is None:
+                start = 0
+            start: int  # type hint
+            if start < 0:
+                start = max(len(self) + start, 0)
+
+            if stop is not None and stop < 0:
+                stop += len(self)
+                if stop < 0:
+                    raise ValueError
+
+            i = self.node_index
+
+            try:
+                if value < self.value:
+                    if start >= i:
+                        raise ValueError
+                    else:
+                        return self.left.index(value, start, stop)
+
+                elif value == self.value:
+                    if start > i or (stop is not None and stop <= i):
+                        raise ValueError
+                    else:
+                        return i
+
+                else:
+                    if stop is not None and stop <= i:
+                        raise ValueError
+                    else:
+                        return i + self.right.index(value, start - i, stop and stop - i)
+
+            except NameError:
+                raise ValueError from None
+
+        def count(self, value: T_) -> int:
+            return int(value in self)
+
+        def clear(self) -> None:
+            if self.has_left:
+                del self._left
+            if self.has_right:
+                del self._right
+
+            raise self.DeleteMe
+
+        def pop(self, index: int = 0) -> T_:
+            self._check_index(index, int_only=True)
+            if index < 0:
+                index += len(self)
+
+            if index == self.node_index:
+                raise self.DeleteMe
+
+            elif index < self.index:
+                try:
+                    retval = self.left.pop(index)
+                except self.DeleteMe:
+                    retval = self.left.value
+                    del self.left
+
+                self._clear_cache()
+                return retval
+
+            else:
+                try:
+                    retval = self.right.pop(index)
+                except self.DeleteMe:
+                    retval = self.right.value
+                    del self.right
+
+                self._clear_cache()
+                return retval
+
+    def __init__(self, iterable: Iterable[T] = None) -> None:
+        if iterable is not None:
+            for value in iterable:
+                self.add(value)
 
     @property
     def has_root(self) -> bool:
@@ -468,7 +661,7 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
     def __delitem__(self, index: int | slice) -> None:
         try:
             del self.root[index]
-        except self.Node._DeleteMe:
+        except self.Node.DeleteMe:
             del self.root
 
     def __len__(self) -> int:
@@ -487,6 +680,49 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
 
     def __contains__(self, key: object) -> bool:
         return hasattr(self, 'root') and key in self.root
+
+    def add(self, value: T) -> None:
+        try:
+            self.root.add(value)
+        except NameError:
+            self.root = self.Node(value)
+
+    def discard(self, value: T) -> None:
+        try:
+            self.root.discard(value)
+        except NameError:
+            pass
+        except self.Node.DeleteMe:
+            del self.root
+
+    def remove(self, value: T) -> None:
+        try:
+            self.root.remove(value)
+        except NameError:
+            raise ValueError from None
+        except self.Node.DeleteMe:
+            del self.root
+
+    def index(self, value: T, start: Optional[int] = 0, stop: Optional[int] = None) -> int:
+        try:
+            return self.root.index(value, start, stop)
+        except NameError:
+            raise ValueError from None
+
+    def count(self, value: T) -> int:
+        return int(value in self)
+
+    def clear(self) -> None:
+        try:
+            del self._root
+        except NameError:
+            pass
+
+    def pop(self, index: int = 0) -> T:
+        try:
+            return self.root.pop(index)
+        except NameError:
+            raise IndexError from None
 
 
 class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
@@ -623,13 +859,16 @@ class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
             return self
         elif n < 0:
             return self << -n
-        elif self.left is None:
+        elif not self.has_left:
             raise ValueError(f"{n} right rotations remaining, but Node has no left child.")
         else:
             if self.skew * self.left.skew < 0:
                 self.left >>= 1
             root = self.left
-            self.left = self.left.right
+            try:
+                self.left = self.left.right
+            except NoRightChildError:
+                del self._left
             root.right = self
             self._clear_cache()
             root._clear_cache()
@@ -641,13 +880,16 @@ class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
             return self
         elif n < 0:
             return self >> -n
-        elif self.right is None:
+        elif not self.has_right:
             raise ValueError(f"{n} left rotations remaining, but Node has no right child.")
         else:
             if self.skew * self.right.skew < 0:
                 self.right <<= 1
             root = self.right
-            self.right = self.right.left
+            try:
+                self.right = self.right.left
+            except NoLeftChildError:
+                del self._right
             root.left = self
             self._clear_cache()
             root._clear_cache()
@@ -657,20 +899,60 @@ class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
         skew = getattr(self.left, 'skew', 0)
 
         if skew < -1:
-            self.left >>= -1 - self.left.skew
+            self.left <<= -1 - self.left.skew
         elif skew > 1:
-            self.left <<= self.left.skew - 1
+            self.left >>= self.left.skew - 1
 
     def rebalance_right(self) -> None:
         skew = getattr(self.right, 'skew', 0)
 
         if skew < -1:
-            self.right >>= -1 - self.right.skew
+            self.right <<= -1 - self.right.skew
         elif skew > 1:
-            self.right <<= self.right.skew - 1
+            self.right >>= self.right.skew - 1
 
 
-class AVLMap[KT: Comparable, VT](BSTMap[KT, VT]):
+class AVLBase[T](BSTBase[T]):
+    @abstractmethod
+    class Node[T_](AVLNodeBase[T_]):
+        ...
+
+    def rebalance(self) -> None:
+        skew = getattr(self.root, 'skew', 0)
+
+        if skew < -1:
+            self.root <<= -1 - self.root.skew
+        elif skew > 1:
+            self.root >>= self.root.skew - 1
+
+
+class AVLSeq[T](AVLBase[T], BSTSeq[T]):
+    class Node[T_](AVLNodeBase[T_], BSTSeq.Node[T_]):
+        __slots__ = ()
+
+    def __delitem__(self, index: int | slice) -> None:
+        super().__delitem__(index)
+        self.rebalance()
+
+    def add(self, value: T) -> None:
+        super().add(value)
+        self.rebalance()
+
+    def discard(self, value: T) -> None:
+        super().discard(value)
+        self.rebalance()
+
+    def remove(self, value: T) -> None:
+        super().remove(value)
+        self.rebalance()
+
+    def pop(self, index: int = 0) -> T:
+        retval = super().pop(index)
+        self.rebalance()
+        return retval
+
+
+class AVLMap[KT: Comparable, VT](AVLBase[KT], BSTMap[KT, VT]):
     class Node[KT_: Comparable, VT_](AVLNodeBase[KT_], BSTMap.Node[KT_, VT_]):
         __slots__ = ()
 
@@ -694,21 +976,11 @@ class AVLMap[KT: Comparable, VT](BSTMap[KT, VT]):
 
     def __setitem__(self, key: KT, value: VT, /) -> None:
         super().__setitem__(key, value)
-        skew = getattr(self.root, 'skew', 0)
-
-        if skew < -1:
-            self.root >>= -1 - skew
-        elif skew > 1:
-            self.root <<= skew - 1
+        self.rebalance()
 
     def __delitem__(self, key: KT, /) -> None:
         super().__delitem__(key)
-        skew = getattr(self.root, 'skew', 0)
-
-        if skew < -1:
-            self.root >>= (-1 - skew)
-        elif skew > 1:
-            self.root <<= skew - 1
+        self.rebalance()
 
 # class SimpleNode[T: Comparable]:
 #     def __init__(self, value: T, left: Self | None = None, right: Self | None = None) -> None:
