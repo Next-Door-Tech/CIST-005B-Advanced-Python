@@ -1,0 +1,15 @@
+sun
+light
+breeze
+sky
+cloud
+river
+stone
+leaf
+bird
+field
+dream
+heart
+mind
+path
+sound
