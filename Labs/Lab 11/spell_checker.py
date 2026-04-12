@@ -5,7 +5,7 @@ dictionary: AVLSeq[str] = AVLSeq()
 
 with open("dictionary.txt", 'r') as d:
     for line in d:
-        dictionary.add(line.lower())
+        dictionary.add(line.lower().strip())
 
 misspelled: AVLSeq[str] = AVLSeq()
 
