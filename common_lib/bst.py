@@ -230,17 +230,17 @@ class BSTNodeBase[T: Comparable](Collection[T], ABC):
     def __len__(self) -> int:
         return self.len
 
-    def __iter__(self) -> Generator[T, None, None]:
+    def __iter__(self) -> Generator[Self, None, None]:
         if self.has_left:
             yield from self.left
-        yield self.key
+        yield self
         if self.has_right:
             yield from self.right
 
-    def __reversed__(self) -> Generator[T, None, None]:
+    def __reversed__(self) -> Generator[Self, None, None]:
         if self.has_right:
             yield from reversed(self.right)
-        yield self.key
+        yield self
         if self.has_left:
             yield from reversed(self.left)
 
@@ -326,14 +326,16 @@ class BSTBase[T: Comparable](Collection[T], ABC):
 
     def __iter__(self) -> Generator[T, None, None]:
         if self.root is not None:
-            yield from self.root
+            for node in self.root:
+                yield node.key
 
     def __reversed__(self) -> Generator[T, None, None]:
         if self.root is not None:
-            yield from reversed(self.root)
+            for node in reversed(self.root):
+                yield node.key
 
     def __contains__(self, key: object) -> bool:
-        return hasattr(self, 'root') and key in self.root
+        return self.has_root and key in self.root
 
     @property
     def depth(self) -> int:
