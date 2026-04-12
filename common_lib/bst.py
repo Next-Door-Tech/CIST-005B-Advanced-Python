@@ -621,7 +621,7 @@ class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
             if index == self.node_index:
                 raise self.DeleteMe
 
-            elif index < self.index:
+            elif index < self.node_index:
                 try:
                     retval = self.left.pop(index)
                 except self.DeleteMe:
