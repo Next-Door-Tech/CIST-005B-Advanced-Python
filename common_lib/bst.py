@@ -394,6 +394,10 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
         def __getitem__(self, index: slice, /, *, recursive: Literal[True]) -> Iterable[T_]:  # noqa
             ...
 
+        @overload
+        def __getitem__(self, index: int | slice, /, *, recursive: Literal[False] = False) -> T_ | list[T_]:
+            ...
+
         def __getitem__(self, index: int | slice, /, *, recursive: bool = False) -> T_ | list[T_] | Iterable[T_]:
             if not recursive:
                 self._check_index(index)
