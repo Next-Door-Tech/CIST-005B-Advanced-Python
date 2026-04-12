@@ -990,6 +990,12 @@ class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
         elif skew > 1:
             self.right >>= self.right.skew - 1
 
+    def rebalance_on_key(self, key) -> None:
+        if key < self.key:
+            self.rebalance_left()
+        elif key != self.key:
+            self.rebalance_right()
+
 
 class AVLBase[T](BSTBase[T]):
     @abstractmethod
