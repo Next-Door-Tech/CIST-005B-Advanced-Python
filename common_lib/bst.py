@@ -729,7 +729,7 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
             raise IndexError from None
 
 
-class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
+class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
     class Node[KT_: Comparable, VT_](MutableMapping[KT_, VT_], BSTNodeBase[KT_]):
         __slots__ = 'value'
 
@@ -854,14 +854,6 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
             return len(self.root)
         else:
             return 0
-
-    def __iter__(self) -> Generator[KT, None, None]:
-        if self.has_root:
-            yield from self.root
-
-    def __reversed__(self) -> Generator[KT, None, None]:
-        if self.has_root:
-            yield from reversed(self.root)
 
 
 class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
