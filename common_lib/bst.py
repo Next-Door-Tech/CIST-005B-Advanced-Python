@@ -800,9 +800,48 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
             right = f", right={self.right!r}" if self.has_right else ""
             return f"{type(self).__qualname__}({self.key!r}, {self.value!r}{left}{right})"
 
-    def __init__(self, root: Node[KT, VT] = None) -> None:
-        if root is not None:
-            self.root = root
+    @overload
+    def __init__(self, /) -> None:
+        ...
+
+    @overload
+    def __init__(self, /, **kwargs: VT) -> None:
+        ...
+
+    @overload
+    def __init__(self, mapping: Mapping[KT, VT], /, **kwargs: VT) -> None:
+        ...
+
+    @overload
+    def __init__(self, iterable: Iterable[tuple[KT, VT]], /, **kwargs: VT) -> None:
+        ...
+
+    def __init__(self, mapping_or_iterable: Mapping[KT, VT] | Iterable[tuple[KT, VT]] = None, /, **kwargs) -> None:
+        if mapping_or_iterable is None:
+            pass
+        elif hasattr(mapping_or_iterable, 'keys') and hasattr(mapping_or_iterable, '__getitem__'):
+            mapping_or_iterable: Mapping
+            for key in mapping_or_iterable.keys():
+                self[key] = mapping_or_iterable[key]
+        elif hasattr(mapping_or_iterable, '__iter__'):
+            mapping_or_iterable: Iterable
+            try:
+                for i, (key, value) in enumerate(mapping_or_iterable):
+                    self[key] = value
+            except ValueError as e:
+                try:
+                    if "values to unpack" in e.args[0]:
+                        raise ValueError(f"Iterable element #{i} has incorrect length; 2 is required") from e
+                except AttributeError:
+                    raise e from None
+                else:
+                    raise e from None
+        else:
+            raise TypeError(f"{type(self).__name__} expected a Mapping or Iterable of (key, value) pairs, "
+                            f"got '{type(mapping_or_iterable)}'")
+
+        for arg in kwargs:
+            self[arg] = kwargs[arg]
 
     @property
     def has_root(self) -> bool:
