@@ -244,6 +244,16 @@ class BSTNodeBase[T: Comparable](Collection[T], ABC):
         if self.has_left:
             yield from reversed(self.left)
 
+    def __str__(self) -> str:
+        left = f"{self.left!s} <-- " if self.has_left else ""
+        right = f" --> {self.right!s}" if self.right else ""
+        return f"({left}{self.key}{right})"
+
+    def __repr__(self) -> str:
+        left = f", left={self.left!r}" if self.has_left else ""
+        right = f", right={self.right!r}" if self.has_right else ""
+        return f"{type(self).__qualname__}({self.key!r}{left}{right})"
+
     def __copy__(self) -> Self:
         new: Self = object.__new__(type(self))
 
@@ -787,6 +797,16 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT]):
                 raise KeyError(key)
 
             self._clear_cache()
+
+        def __str__(self) -> str:
+            left = f"{self.left!s} <-- " if self.has_left else ""
+            right = f" --> {self.right!s}" if self.right else ""
+            return f"({left}({self.key}: {self.value}){right})"
+
+        def __repr__(self) -> str:
+            left = f", left={self.left!r}" if self.has_left else ""
+            right = f", right={self.right!r}" if self.has_right else ""
+            return f"{type(self).__qualname__}({self.key!r}, {self.value!r}{left}{right})"
 
     def __init__(self, root: Node[KT, VT] = None) -> None:
         if root is not None:
