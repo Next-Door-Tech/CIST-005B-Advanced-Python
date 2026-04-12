@@ -579,7 +579,7 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
                     else:
                         return i + self.right.index(value, start - i, stop and stop - i)
 
-            except NameError:
+            except AttributeError:
                 raise ValueError from None
 
         def count(self, value: T_) -> int:
@@ -686,13 +686,13 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
     def add(self, value: T) -> None:
         try:
             self.root.add(value)
-        except NameError:
+        except AttributeError:
             self.root = self.Node(value)
 
     def discard(self, value: T) -> None:
         try:
             self.root.discard(value)
-        except NameError:
+        except AttributeError:
             pass
         except self.Node.DeleteMe:
             del self.root
@@ -700,7 +700,7 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
     def remove(self, value: T) -> None:
         try:
             self.root.remove(value)
-        except NameError:
+        except AttributeError:
             raise ValueError from None
         except self.Node.DeleteMe:
             del self.root
@@ -708,7 +708,7 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
     def index(self, value: T, start: Optional[int] = 0, stop: Optional[int] = None) -> int:
         try:
             return self.root.index(value, start, stop)
-        except NameError:
+        except AttributeError:
             raise ValueError from None
 
     def count(self, value: T) -> int:
@@ -717,13 +717,13 @@ class BSTSeq[T: Comparable](Sequence[T], BSTBase[T], _CommonMethods[T]):
     def clear(self) -> None:
         try:
             del self._root
-        except NameError:
+        except AttributeError:
             pass
 
     def pop(self, index: int = 0) -> T:
         try:
             return self.root.pop(index)
-        except NameError:
+        except AttributeError:
             raise IndexError from None
 
 
