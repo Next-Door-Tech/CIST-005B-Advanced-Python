@@ -58,7 +58,7 @@ class BSTNodeBase[T: Comparable](Collection[T], ABC):
 
     @property
     def has_left(self) -> bool:
-        return hasattr(self, 'left')
+        return hasattr(self, '_left')
 
     @property
     def left(self) -> Self:
@@ -85,7 +85,7 @@ class BSTNodeBase[T: Comparable](Collection[T], ABC):
 
     @property
     def has_right(self) -> bool:
-        return hasattr(self, 'right')
+        return hasattr(self, '_right')
 
     @property
     def right(self) -> Self:
@@ -314,7 +314,7 @@ class BSTBase[T: Comparable](Collection[T], ABC):
 
     @property
     def has_root(self) -> bool:
-        return hasattr(self, 'root')
+        return hasattr(self, '_root')
 
     @property
     def root(self) -> Node[T]:
