@@ -916,6 +916,12 @@ class BSTMap[KT: Comparable, VT](MutableMapping[KT, VT], BSTBase[KT]):
         else:
             return 0
 
+    def __str__(self) -> str:
+        return '{' + ', '.join(f'str({key}): {self[key]}' for key in self) + '}'
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({'{' + ', '.join(f'str({key}): {self[key]}' for key in self) + '}'})"
+
 
 class AVLNodeBase[T: Comparable](BSTNodeBase[T]):
     __slots__ = ()
