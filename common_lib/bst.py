@@ -217,6 +217,14 @@ class BSTNodeBase[T: Comparable](Collection[T], ABC):
     def is_leaf(self) -> bool:
         return self.left is None and self.right is None
 
+    def clear(self) -> None:
+        if self.has_left:
+            del self._left
+        if self.has_right:
+            del self._right
+
+        raise self.DeleteMe
+
     def __contains__(self, key: object) -> bool:
         if self.key is key or self.key == key:
             return True
@@ -607,14 +615,6 @@ class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
 
         def count(self, value: T_) -> int:
             return int(value in self)
-
-        def clear(self) -> None:
-            if self.has_left:
-                del self._left
-            if self.has_right:
-                del self._right
-
-            raise self.DeleteMe
 
         def pop(self, index: int = 0) -> T_:
             self._check_index(index, int_only=True)
