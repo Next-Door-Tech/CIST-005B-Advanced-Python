@@ -302,6 +302,7 @@ class BSTNodeBase[T: Comparable](Collection[T], ABC):
 class BSTBase[T: Comparable](Collection[T], ABC):
     @abstractmethod
     class Node[T_](BSTNodeBase[T_]):
+        __slots__ = ()
         ...
 
     _root: Node
@@ -370,6 +371,8 @@ class BSTBase[T: Comparable](Collection[T], ABC):
 
 class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
     class Node[T_: Comparable](BSTNodeBase[T_], _CommonMethods[T_], Sequence[T_]):
+        __slots__ = ()
+
         @property
         def value(self) -> T_:
             return self.key
