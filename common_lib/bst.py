@@ -377,8 +377,8 @@ class BSTBase[T: Comparable](Collection[T], ABC):
             return 0
 
 
-class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
-    class Node[T_: Comparable](BSTNodeBase[T_], _CommonMethods[T_], Sequence[T_]):
+class BSTSeqSetBase[T](BSTBase[T], ABC):
+    class Node[T_](BSTNodeBase[T_], ABC):
         __slots__ = ()
 
         @property
@@ -388,6 +388,151 @@ class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
         @value.setter
         def value(self, value: T_) -> None:
             self.key = value
+
+        def add(self, value: T_) -> None:
+            if value == self.value:
+                return
+            elif value < self.value:
+                if self.has_left:
+                    self.left.add(value)
+                else:
+                    self.left = type(self)(value)
+
+                if not self.left._has_cache:
+                    self._clear_cache()
+            else:
+                if self.has_right:
+                    self.right.add(value)
+                else:
+                    self.right = type(self)(value)
+
+                if not self.right._has_cache:
+                    self._clear_cache()
+
+        def discard(self, value: T_) -> None:
+            """Remove a member. Do not raise an exception if absent."""
+            if value == self.value:
+                raise self.DeleteMe
+
+            elif value < self.value:
+                if self.has_left:
+                    try:
+                        self.left.discard(value)
+                        if not self.left._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.left
+                        self._clear_cache()
+            else:
+                if self.has_right:
+                    try:
+                        self.right.discard(value)
+                        if not self.right._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.right
+                        self._clear_cache()
+
+        def remove(self, value: T_) -> None:
+            """Remove a member. Do raise ValueError if absent."""
+            if value == self.value:
+                raise self.DeleteMe
+
+            elif value < self.value:
+                if self.has_left:
+                    try:
+                        self.left.discard(value)
+                        if not self.left._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.left
+                        self._clear_cache()
+                else:
+                    raise ValueError
+
+            else:
+                if self.has_right:
+                    try:
+                        self.right.discard(value)
+                        if not self.right._has_cache:
+                            self._clear_cache()
+                    except self.DeleteMe:
+                        del self.right
+                        self._clear_cache()
+                else:
+                    raise ValueError
+
+    _root: Node
+
+    @property
+    def root(self) -> Node[T]:
+        return self._root
+
+    @root.setter
+    def root(self, node: Node[T]) -> None:
+        self._root = node
+
+    @root.deleter
+    def root(self) -> None:
+        try:
+            if not self.root.has_right:
+                self.root = self.root.left
+            else:
+                self.root = self.root.pop_lrc()
+        except* MissingChildError:
+            del self._root
+
+    def add(self, value: T) -> None:
+        try:
+            self.root.add(value)
+        except AttributeError:
+            self.root = self.Node(value)
+
+    def discard(self, value: T) -> None:
+        try:
+            self.root.discard(value)
+        except AttributeError:
+            pass
+        except self.Node.DeleteMe:
+            del self.root
+
+    def remove(self, value: T) -> None:
+        try:
+            self.root.remove(value)
+        except AttributeError:
+            raise ValueError from None
+        except self.Node.DeleteMe:
+            del self.root
+
+
+class BSTSet[T: Comparable](BSTSeqSetBase[T], MutableSet[T]):
+    class Node[T_: Comparable](BSTSeqSetBase.Node[T_], MutableSet[T_]):
+        __slots__ = ()
+
+    _root: Node
+
+    @property
+    def root(self) -> Node[T]:
+        return self._root
+
+    @root.setter
+    def root(self, node: Node[T]) -> None:
+        self._root = node
+
+    @root.deleter
+    def root(self) -> None:
+        try:
+            if not self.root.has_right:
+                self.root = self.root.left
+            else:
+                self.root = self.root.pop_lrc()
+        except* MissingChildError:
+            del self._root
+
+
+class BSTSeq[T: Comparable](BSTSeqSetBase[T], _CommonMethods[T], Sequence[T]):
+    class Node[T_: Comparable](BSTSeqSetBase.Node[T_], _CommonMethods[T_], Sequence[T_]):
+        __slots__ = ()
 
         @property
         def node_index(self) -> int:
@@ -504,79 +649,6 @@ class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
                     if self.node_index in indices:
                         raise self.DeleteMe
 
-        def add(self, value: T_) -> None:
-            if value == self.value:
-                return
-            elif value < self.value:
-                if self.has_left:
-                    self.left.add(value)
-                else:
-                    self.left = type(self)(value)
-
-                if not self.left._has_cache:
-                    self._clear_cache()
-            else:
-                if self.has_right:
-                    self.right.add(value)
-                else:
-                    self.right = type(self)(value)
-
-                if not self.right._has_cache:
-                    self._clear_cache()
-
-        def discard(self, value: T_) -> None:
-            """Remove a member. Do not raise an exception if absent."""
-            if value == self.value:
-                raise self.DeleteMe
-
-            elif value < self.value:
-                if self.has_left:
-                    try:
-                        self.left.discard(value)
-                        if not self.left._has_cache:
-                            self._clear_cache()
-                    except self.DeleteMe:
-                        del self.left
-                        self._clear_cache()
-            else:
-                if self.has_right:
-                    try:
-                        self.right.discard(value)
-                        if not self.right._has_cache:
-                            self._clear_cache()
-                    except self.DeleteMe:
-                        del self.right
-                        self._clear_cache()
-
-        def remove(self, value: T_) -> None:
-            """Remove a member. Do raise ValueError if absent."""
-            if value == self.value:
-                raise self.DeleteMe
-
-            elif value < self.value:
-                if self.has_left:
-                    try:
-                        self.left.discard(value)
-                        if not self.left._has_cache:
-                            self._clear_cache()
-                    except self.DeleteMe:
-                        del self.left
-                        self._clear_cache()
-                else:
-                    raise ValueError
-
-            else:
-                if self.has_right:
-                    try:
-                        self.right.discard(value)
-                        if not self.right._has_cache:
-                            self._clear_cache()
-                    except self.DeleteMe:
-                        del self.right
-                        self._clear_cache()
-                else:
-                    raise ValueError
-
         def index(self, value: T_, start: Optional[int] = 0, stop: Optional[int] = None) -> int:
             if start is None:
                 start = 0
@@ -644,6 +716,8 @@ class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
                 self._clear_cache()
                 return retval
 
+    _root: Node
+
     def __init__(self, iterable: Iterable[T] = None) -> None:
         if iterable is not None:
             for value in iterable:
@@ -697,28 +771,6 @@ class BSTSeq[T: Comparable](BSTBase[T], _CommonMethods[T], Sequence[T]):
 
     def __contains__(self, key: object) -> bool:
         return hasattr(self, 'root') and key in self.root
-
-    def add(self, value: T) -> None:
-        try:
-            self.root.add(value)
-        except AttributeError:
-            self.root = self.Node(value)
-
-    def discard(self, value: T) -> None:
-        try:
-            self.root.discard(value)
-        except AttributeError:
-            pass
-        except self.Node.DeleteMe:
-            del self.root
-
-    def remove(self, value: T) -> None:
-        try:
-            self.root.remove(value)
-        except AttributeError:
-            raise ValueError from None
-        except self.Node.DeleteMe:
-            del self.root
 
     def index(self, value: T, start: Optional[int] = 0, stop: Optional[int] = None) -> int:
         try:
