@@ -1066,6 +1066,31 @@ class AVLBase[T](BSTBase[T]):
             self.root >>= self.root.skew - 1
 
 
+class AVLSet[T](AVLBase[T], BSTSet[T]):
+    class Node[T_](AVLNodeBase[T_], BSTSet.Node[T_]):
+        __slots__ = ()
+
+    _root: Node
+
+    @property
+    def root(self) -> Node[T]:
+        return self._root
+
+    @root.setter
+    def root(self, node: Node[T]) -> None:
+        self._root = node
+
+    @root.deleter
+    def root(self) -> None:
+        try:
+            if not self.root.has_right:
+                self.root = self.root.left
+            else:
+                self.root = self.root.pop_lrc()
+        except* MissingChildError:
+            del self._root
+
+
 class AVLSeq[T](AVLBase[T], BSTSeq[T]):
     class Node[T_](AVLNodeBase[T_], BSTSeq.Node[T_]):
         __slots__ = ()
