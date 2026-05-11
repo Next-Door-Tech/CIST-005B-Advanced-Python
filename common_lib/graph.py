@@ -1,7 +1,6 @@
-from collections.abc import Collection, Iterable, Hashable
-from typing import Protocol, Literal
-from abc import abstractmethod
-from typing import Protocol, Literal, runtime_checkable
+from collections.abc import Collection, Iterable, Hashable, Set
+from typing import Protocol, Literal, runtime_checkable, Self
+from abc import ABC, abstractmethod
 from numbers import Real
 
 
@@ -105,3 +104,112 @@ class WDiEdge[VertT: Hashable](WEdge[VertT], DiEdge[VertT], Protocol):
     """A weighted and directed edge."""
 
     __slots__ = ()
+
+
+class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
+    """A Graph containing multiple Vertices connected via Edges."""
+
+    __slots__ = ()
+
+    @abstractmethod
+    def __init__(self, vertices: Iterable[VertT] | None = None, edges: Iterable[EdgeT] | None = None) -> None:
+        """Create a Graph with the provided set of Vertices and Edges between those Vertices.
+        :raises ValueError: A provided Edge's endpoints are not Vertices in this Graph."""
+
+    def __contains__(self, vertex: VertT) -> bool:
+        """Returns `True` if the Graph contains the specified Vertex."""
+        return vertex in self.vertices
+
+    @abstractmethod
+    @property
+    def vertices(self) -> set[VertT]:
+        """Returns a `set` of all vertices in the Graph."""
+
+    @abstractmethod
+    @property
+    def edges(self) -> set[EdgeT]:
+        """Returns a `set` of all edges in a graph"""
+
+    @abstractmethod
+    def add_vertex(self, vertex: VertT, *args, **kwargs) -> None:
+        """Adds the specified vertex to the graph. Overrides may add additional arguments as necessary."""
+
+    @abstractmethod
+    def add_edge(self, source: VertT, dest: VertT, *args, **kwargs) -> None:
+        """Adds an edge between the specified vertices. Overrides may add additional arguments as necessary."""
+
+    @abstractmethod
+    def neighbors(self, vertex: VertT) -> Set[VertT]:
+        """Returns a Set of vertices which are the destination of an edge starting at the supplied vertex."""
+
+    def connected(self, source: VertT, dest: VertT) -> bool:
+        """Returns `True` if there is an Edge from `source` to `dest`."""
+        return dest in self.neighbors(source)
+
+    def __lt__(self, other: Self) -> bool:
+        """Returns whether `self` is a proper subgraph of `other`."""
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.edges < other.edges and self.vertices < other.vertices
+
+    def __le__(self, other: Self) -> bool:
+        """Returns whether `self` is an improper subgraph of `other`."""
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.edges <= other.edges and self.vertices <= other.vertices
+
+    def __eq__(self, other: Self) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.vertices == other.vertices and self.edges == other.edges
+
+    def __ge__(self, other: Self) -> bool:
+        """Returns whether `self` is an improper supergraph of `other`."""
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.edges >= other.edges and self.vertices >= other.vertices
+
+    def __gt__(self, other: Self) -> bool:
+        """Returns whether `self` is a proper supergraph of `other`."""
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        return self.edges > other.edges and self.vertices > other.vertices
+
+    @abstractmethod
+    def __and__(self, other) -> Self | NotImplemented:
+        """Return the intersection of the two Graphs."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __iand__(self, other: Self) -> Self:
+        """Update `self` to the intersection of `self` and `other` in-place."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __or__(self, other: Self) -> Self | NotImplemented:
+        """Return the union of the two Graphs."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __ior__(self, other: Self) -> Self:
+        """Update `self` to the union of `self` and `other` in-place."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __sub__(self, other: Self) -> Self | NotImplemented:
+        """Return the difference of the two graphs."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __rsub__(self, other: Self) -> Self | NotImplemented:
+        """Return the difference of the two graphs."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __isub__(self, other: Self) -> Self:
+        """Update `self` to the difference of `self` and `other` in-place."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def __copy__(self) -> Self:
+        raise NotImplementedError
