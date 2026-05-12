@@ -84,24 +84,6 @@ class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
         ...
 
 
-class DiEdge[VertT: Hashable](Edge[VertT], Protocol):
-    """A directed edge in a Graph.
-    Must contain two indexable vertices, though they may be identical for a loopback edge."""
-
-    __slots__ = ()
-
-    @abstractmethod
-    def __getitem__(self, index: Literal[0, 1]) -> VertT:
-        """Return the start vertex or end vertex of this graph."""
-        ...
-
-
-class WDiEdge[VertT: Hashable](WEdge[VertT], DiEdge[VertT], Protocol):
-    """A weighted and directed edge."""
-
-    __slots__ = ()
-
-
 class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
     """A Graph containing multiple Vertices connected via Edges."""
 
