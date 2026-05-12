@@ -168,7 +168,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
     def __eq__(self, other: Self | object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
-        return self.vertices == other.vertices and self.edges == other.edges
+        return other is self or (self.vertices == other.vertices and self.edges == other.edges)
 
     def __ge__(self, other: Self) -> bool:
         """Returns whether `self` is an improper supergraph of `other`."""
