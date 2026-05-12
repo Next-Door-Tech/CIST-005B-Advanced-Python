@@ -1,5 +1,5 @@
 from collections.abc import Collection, Iterable, Hashable, Set
-from typing import Protocol, Literal, runtime_checkable, Self
+from typing import Protocol, runtime_checkable, Self
 from abc import ABC, abstractmethod
 
 
@@ -52,22 +52,31 @@ class Weight(Protocol):
 
 
 class Edge[VertT: Hashable](Protocol):
-    """An edge in a Graph.
-    Must contain two vertices as endpoints, though they may be identical for a loopback edge."""
+    """An edge in a Graph. Must contain two vertices as endpoints,
+    though they may be identical for a loopback edge.
+    Additional information may be assigned to an edge
+    to represent directed edges, weights, etc."""
 
     __slots__ = ()
 
     @abstractmethod
     def __contains__(self, vertex: VertT) -> bool:
         """Return True if vertex is either the start or end of this edge."""
-        ...
+
+    @abstractmethod
+    def __eq__(self, other: Self | object) -> bool:
+        """Return True if the edges are equal, i.e. both edges have
+        the same endpoints and any additional values are equal."""
 
 
-class WEdge[VertT: Hashable](Edge[VertT], Protocol):
+class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
     """A weighted edge in a Graph.
     Must return the edge weight via the __len__ method."""
 
     __slots__ = ()
+
+    @property
+    def weight(self) -> Weight:
 
     @abstractmethod
     def __len__(self) -> int:
