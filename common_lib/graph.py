@@ -192,3 +192,116 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
     @abstractmethod
     def __copy__(self) -> Self:
         raise NotImplementedError
+
+
+class SimpleGraph[VertT: Hashable](GraphABC[VertT, frozenset[VertT]]):
+    """A simple graph (undirected, unweighted, no duplicate edges)."""
+
+    _vertices: set[VertT]
+    _edges: set[frozenset[VertT]]
+
+    def __init__(self, vertices: Iterable[VertT] | None = None, edges: Iterable[Iterable[VertT]] | None = None) -> None:
+        if vertices is not None:
+            self._vertices = set(vertices)
+        else:
+            self._vertices = set()
+
+        self._edges = set()
+        if edges is not None:
+            for i, e in enumerate(edges):
+                edge = frozenset(e)
+                if len(edge) != 2:
+                    # noinspection PyStringConversionWithoutDunderMethod
+                    raise ValueError(f"Item {i} in edges ({e}) must contain exactly two items.")
+                for v in edge:
+                    if v not in self._vertices:
+                        raise ValueError(f"Endpoint {v!r} in edges[{i}] is not a vertex.")
+
+                self._edges.add(edge)
+
+    @property
+    def vertices(self) -> frozenset[VertT]:
+        return frozenset(self._vertices)
+
+    @property
+    def edges(self) -> frozenset[frozenset[VertT]]:
+        return frozenset(self._edges)
+
+    def add_vertex(self, vertex: VertT) -> None:
+        self._vertices.add(vertex)
+
+    def add_edge(self, source: VertT, dest: VertT) -> None:
+        edge = frozenset((source, dest))
+        if not edge <= self._vertices:
+            s = "Provided vertices are not present in this Graph:"
+            if source not in self._vertices:
+                s += f" source: {source!r}"
+            if dest not in self._vertices:
+                s += f" dest: {dest!r}"
+            raise ValueError(s)
+        if len(edge) < 2:
+            raise ValueError(f"source and dest must be distinct in a simple graph, got ({source!r}, {dest!r})")
+        self._edges.add(edge)
+
+    def neighbors(self, vertex: VertT) -> Set[VertT]:
+        return set.union(*(edge for edge in self._edges if vertex in edge)) - {vertex}
+
+    def __and__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            return type(self)(self.vertices & other.vertices, self.edges & other.edges)
+
+    def __iand__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            raise NotImplementedError
+        else:
+            self._vertices &= other.vertices
+            self._edges &= other.edges
+            return self
+
+    def __or__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            return type(self)(self.vertices | other.vertices, self.edges | other.edges)
+
+    def __ior__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            raise NotImplementedError
+        else:
+            self._vertices |= other.vertices
+            self._edges |= other.edges
+            return self
+
+    def __sub__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            vertices = self.vertices - other.vertices
+            edges = {e for e in self.edges - other.edges if e <= vertices}
+
+            return type(self)(vertices, edges)
+
+    def __rsub__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            vertices = other.vertices - self.vertices
+            edges = {e for e in other.edges - self.edges if e <= vertices}
+
+            return type(self)(vertices, edges)
+
+    def __isub__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            raise NotImplementedError
+        else:
+            self._vertices -= other.vertices
+            self._edges -= other.edges
+            for e in self._edges:
+                if not e <= self._vertices:
+                    self._edges.remove(e)
+            return self
+
+    def __copy__(self) -> Self:
+        return type(self)(self._vertices, self._edges)
