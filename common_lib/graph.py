@@ -351,3 +351,65 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
                     self._edges.remove(e)
             return self
 
+
+class DiGraph[VertT: Hashable](BaseGraph[VertT, tuple[VertT, VertT]]):
+    """A simple directed graph (unweighted, no duplicate edges)."""
+
+    type EdgeT = tuple[VertT, VertT]
+
+    _vertices: set[VertT]
+    _edges: set[EdgeT]
+
+    def add_edge(self, source: VertT, dest: VertT) -> None:
+        edge_set = frozenset((source, dest))
+        if not edge_set <= self._vertices:
+            s = "Provided vertices are not present in this Graph:"
+            if source not in self._vertices:
+                s += f" source: {source!r}"
+            if dest not in self._vertices:
+                s += f" dest: {dest!r}"
+            raise KeyError(s)
+        if len(edge_set) < 2:
+            raise ValueError(f"Source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r})")
+        self._edges.add((source, dest))
+
+    def remove_edge(self, source: VertT, dest: VertT) -> None:
+        try:
+            self._edges.remove((source, dest))
+        except KeyError:
+            raise KeyError(f"No edge between {source!r} and {dest!r}") from None
+
+    def discard_edge(self, source: VertT, dest: VertT) -> None:
+        self._edges.discard((source, dest))
+
+    def neighbors(self, vertex: VertT) -> set[VertT]:
+        return set(e[1] for e in self.edges if vertex is e[0] or vertex == e[0])
+
+    def __sub__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            vertices = self.vertices - other.vertices
+            edges = {e for e in self.edges - other.edges if all(v in vertices for v in e)}
+
+            return type(self)(vertices, edges)
+
+    def __rsub__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            vertices = other.vertices - self.vertices
+            edges = {e for e in other.edges - self.edges if all(v in vertices for v in e)}
+
+            return type(self)(vertices, edges)
+
+    def __isub__(self, other: Self) -> Self:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        else:
+            self._vertices -= other.vertices
+            self._edges -= other.edges
+            for e in self._edges:
+                if not all(v in self._vertices for v in e):
+                    self._edges.remove(e)
+            return self
