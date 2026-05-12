@@ -109,11 +109,11 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         """Returns a (possibly immutable) `Set` of all edges in the Graph."""
 
     @abstractmethod
-    def add_vertex(self, vertex: VertT, *args, **kwargs) -> None:
+    def add_vertex(self, vertex: VertT) -> None:
         """Adds the specified vertex to the graph. Overrides may add additional arguments as necessary."""
 
     @abstractmethod
-    def add_edge(self, source: VertT, dest: VertT, *args, **kwargs) -> None:
+    def add_edge(self, source: VertT, dest: VertT) -> None:
         """Adds an edge between the specified vertices. Overrides may add additional arguments as necessary."""
 
     @abstractmethod
