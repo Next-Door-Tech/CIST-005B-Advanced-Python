@@ -306,7 +306,8 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
                 s += f" dest: {dest!r}"
             raise KeyError(s)
         if len(edge) < 2:
-            raise ValueError(f"source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r})")
+            raise ValueError(
+                f"Source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r}).")
         self._edges.add(edge)
 
     def remove_edge(self, source: VertT, dest: VertT) -> None:
