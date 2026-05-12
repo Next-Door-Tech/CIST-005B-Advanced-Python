@@ -233,7 +233,7 @@ class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
 
     def __iand__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
-            raise NotImplementedError
+            return NotImplemented
         else:
             self._vertices &= other.vertices
             self._edges &= other.edges
@@ -247,7 +247,7 @@ class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
 
     def __ior__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
-            raise NotImplementedError
+            return NotImplemented
         else:
             self._vertices |= other.vertices
             self._edges |= other.edges
@@ -298,7 +298,7 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
 
     def __isub__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
-            raise NotImplementedError
+            return NotImplemented
         else:
             self._vertices -= other.vertices
             self._edges -= other.edges
