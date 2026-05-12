@@ -101,13 +101,13 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
     @abstractmethod
     @property
-    def vertices(self) -> Set[VertT]:
-        """Returns a (possibly immutable) `Set` of all vertices in the Graph."""
+    def vertices(self) -> Iterable[VertT]:
+        """Returns an Iterable of all vertices in the Graph."""
 
     @abstractmethod
     @property
-    def edges(self) -> Set[EdgeT]:
-        """Returns a (possibly immutable) `Set` of all edges in the Graph."""
+    def edges(self) -> Iterable[EdgeT]:
+        """Returns an Iterable of all edges in the Graph."""
 
     @abstractmethod
     def add_vertex(self, vertex: VertT) -> None:
@@ -146,8 +146,8 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         Does not raise an error if the edge is not present."""
 
     @abstractmethod
-    def neighbors(self, vertex: VertT) -> Set[VertT]:
-        """Returns a Set of vertices which are the destination of an edge starting at the supplied vertex."""
+    def neighbors(self, vertex: VertT) -> Iterable[VertT]:
+        """Returns an Iterable of vertices which are the destination of an edge starting at the supplied vertex."""
 
     def connected(self, source: VertT, dest: VertT) -> bool:
         """Returns `True` if there is an Edge from `source` to `dest`."""
@@ -319,7 +319,7 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
     def discard_edge(self, source: VertT, dest: VertT) -> None:
         self._edges.discard(frozenset((source, dest)))
 
-    def neighbors(self, vertex: VertT) -> Set[VertT]:
+    def neighbors(self, vertex: VertT) -> set[VertT]:
         return set.union(*(edge for edge in self._edges if vertex in edge)) - {vertex}
 
     def __sub__(self, other: Self) -> Self:
