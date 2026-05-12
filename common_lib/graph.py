@@ -94,19 +94,19 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         """Create a Graph with the provided set of Vertices and Edges between those Vertices.
         :raises ValueError: A provided Edge's endpoints are not Vertices in this Graph."""
 
-    def __contains__(self, vertex: VertT) -> bool:
+    def __contains__(self, vertex: VertT | object) -> bool:
         """Returns `True` if the Graph contains the specified Vertex."""
         return vertex in self.vertices
 
     @abstractmethod
     @property
-    def vertices(self) -> set[VertT]:
-        """Returns a `set` of all vertices in the Graph."""
+    def vertices(self) -> Set[VertT]:
+        """Returns a (possibly immutable) `Set` of all vertices in the Graph."""
 
     @abstractmethod
     @property
-    def edges(self) -> set[EdgeT]:
-        """Returns a `set` of all edges in a graph"""
+    def edges(self) -> Set[EdgeT]:
+        """Returns a (possibly immutable) `Set` of all edges in the Graph."""
 
     @abstractmethod
     def add_vertex(self, vertex: VertT, *args, **kwargs) -> None:
@@ -136,7 +136,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
             return NotImplemented
         return self.edges <= other.edges and self.vertices <= other.vertices
 
-    def __eq__(self, other: Self) -> bool:
+    def __eq__(self, other: Self | object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
         return self.vertices == other.vertices and self.edges == other.edges
@@ -154,7 +154,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         return self.edges > other.edges and self.vertices > other.vertices
 
     @abstractmethod
-    def __and__(self, other) -> Self | NotImplemented:
+    def __and__(self, other: Self) -> Self:
         """Return the intersection of the two Graphs."""
         raise NotImplementedError
 
@@ -164,7 +164,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def __or__(self, other: Self) -> Self | NotImplemented:
+    def __or__(self, other: Self) -> Self:
         """Return the union of the two Graphs."""
         raise NotImplementedError
 
@@ -174,12 +174,12 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def __sub__(self, other: Self) -> Self | NotImplemented:
+    def __sub__(self, other: Self) -> Self:
         """Return the difference of the two graphs."""
         raise NotImplementedError
 
     @abstractmethod
-    def __rsub__(self, other: Self) -> Self | NotImplemented:
+    def __rsub__(self, other: Self) -> Self:
         """Return the difference of the two graphs."""
         raise NotImplementedError
 
