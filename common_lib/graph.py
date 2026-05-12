@@ -231,7 +231,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
 
 class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
-    """A simple graph (undirected, unweighted, no duplicate edges)."""
+    """Base Methods for Graphs"""
 
     _vertices: set[VertT]
     _edges: set[EdgeT]
