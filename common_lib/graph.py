@@ -111,11 +111,39 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
     @abstractmethod
     def add_vertex(self, vertex: VertT) -> None:
-        """Adds the specified vertex to the graph. Overrides may add additional arguments as necessary."""
+        """Adds the specified vertex to the graph.
+
+        Overrides may add additional arguments as necessary."""
+
+    @abstractmethod
+    def remove_vertex(self, vertex: VertT) -> None:
+        """Removes the specified vertex from the graph.
+
+        :raises KeyError: Specified vertex is not in the graph."""
+
+    @abstractmethod
+    def discard_vertex(self, vertex: VertT) -> None:
+        """Removes the specified vertex from the graph.
+
+        Does not raise an error if the vertex is not present."""
 
     @abstractmethod
     def add_edge(self, source: VertT, dest: VertT) -> None:
-        """Adds an edge between the specified vertices. Overrides may add additional arguments as necessary."""
+        """Adds an edge between the specified vertices.
+
+        Overrides may add additional arguments as necessary."""
+
+    @abstractmethod
+    def remove_edge(self, source: VertT, dest: VertT) -> None:
+        """Removes the specified edge from the graph.
+
+        :raises KeyError: Specified edge is not in the graph."""
+
+    @abstractmethod
+    def discard_edge(self, source: VertT, dest: VertT) -> None:
+        """Removes the specified edge from the graph.
+
+        Does not raise an error if the edge is not present."""
 
     @abstractmethod
     def neighbors(self, vertex: VertT) -> Set[VertT]:
@@ -225,6 +253,12 @@ class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     def add_vertex(self, vertex: VertT) -> None:
         self._vertices.add(vertex)
 
+    def remove_vertex(self, vertex: VertT) -> None:
+        self._vertices.remove(vertex)
+
+    def discard_vertex(self, vertex: VertT) -> None:
+        self._vertices.discard(vertex)
+
     def __and__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
             return NotImplemented
@@ -274,6 +308,15 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
         if len(edge) < 2:
             raise ValueError(f"source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r})")
         self._edges.add(edge)
+
+    def remove_edge(self, source: VertT, dest: VertT) -> None:
+        try:
+            self._edges.remove(frozenset((source, dest)))
+        except KeyError:
+            raise KeyError(f"No edge between {source!r} and {dest!r}") from None
+
+    def discard_edge(self, source: VertT, dest: VertT) -> None:
+        self._edges.discard(frozenset((source, dest)))
 
     def neighbors(self, vertex: VertT) -> Set[VertT]:
         return set.union(*(edge for edge in self._edges if vertex in edge)) - {vertex}
