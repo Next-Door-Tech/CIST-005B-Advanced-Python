@@ -211,7 +211,7 @@ class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
             for i, e in enumerate(edges):
                 try:
                     self.add_edge(*e)
-                except (ValueError, TypeError) as exc:
+                except (KeyError, TypeError, ValueError) as exc:
                     raise ValueError(f"Failed to add edges[{i}] == {e!r}") from exc
 
     @property
@@ -270,9 +270,9 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
                 s += f" source: {source!r}"
             if dest not in self._vertices:
                 s += f" dest: {dest!r}"
-            raise ValueError(s)
+            raise KeyError(s)
         if len(edge) < 2:
-            raise ValueError(f"source and dest must be distinct in a simple graph, got ({source!r}, {dest!r})")
+            raise ValueError(f"source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r})")
         self._edges.add(edge)
 
     def neighbors(self, vertex: VertT) -> Set[VertT]:
