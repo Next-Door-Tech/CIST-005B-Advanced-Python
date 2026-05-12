@@ -194,11 +194,11 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         raise NotImplementedError
 
 
-class SimpleGraph[VertT: Hashable](GraphABC[VertT, frozenset[VertT]]):
+class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     """A simple graph (undirected, unweighted, no duplicate edges)."""
 
     _vertices: set[VertT]
-    _edges: set[frozenset[VertT]]
+    _edges: set[EdgeT]
 
     def __init__(self, vertices: Iterable[VertT] | None = None, edges: Iterable[Iterable[VertT]] | None = None) -> None:
         if vertices is not None:
@@ -209,42 +209,21 @@ class SimpleGraph[VertT: Hashable](GraphABC[VertT, frozenset[VertT]]):
         self._edges = set()
         if edges is not None:
             for i, e in enumerate(edges):
-                edge = frozenset(e)
-                if len(edge) != 2:
-                    # noinspection PyStringConversionWithoutDunderMethod
-                    raise ValueError(f"Item {i} in edges ({e}) must contain exactly two items.")
-                for v in edge:
-                    if v not in self._vertices:
-                        raise ValueError(f"Endpoint {v!r} in edges[{i}] is not a vertex.")
-
-                self._edges.add(edge)
+                try:
+                    self.add_edge(*e)
+                except (ValueError, TypeError) as exc:
+                    raise ValueError(f"Failed to add edges[{i}] == {e!r}") from exc
 
     @property
     def vertices(self) -> frozenset[VertT]:
         return frozenset(self._vertices)
 
     @property
-    def edges(self) -> frozenset[frozenset[VertT]]:
+    def edges(self) -> frozenset[EdgeT]:
         return frozenset(self._edges)
 
     def add_vertex(self, vertex: VertT) -> None:
         self._vertices.add(vertex)
-
-    def add_edge(self, source: VertT, dest: VertT) -> None:
-        edge = frozenset((source, dest))
-        if not edge <= self._vertices:
-            s = "Provided vertices are not present in this Graph:"
-            if source not in self._vertices:
-                s += f" source: {source!r}"
-            if dest not in self._vertices:
-                s += f" dest: {dest!r}"
-            raise ValueError(s)
-        if len(edge) < 2:
-            raise ValueError(f"source and dest must be distinct in a simple graph, got ({source!r}, {dest!r})")
-        self._edges.add(edge)
-
-    def neighbors(self, vertex: VertT) -> Set[VertT]:
-        return set.union(*(edge for edge in self._edges if vertex in edge)) - {vertex}
 
     def __and__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
@@ -264,7 +243,7 @@ class SimpleGraph[VertT: Hashable](GraphABC[VertT, frozenset[VertT]]):
         if not isinstance(other, type(self)):
             return NotImplemented
         else:
-            return type(self)(self.vertices | other.vertices, self.edges | other.edges)
+            return type(self)(self._vertices | other._vertices, self._edges | other._edges)
 
     def __ior__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
@@ -273,6 +252,31 @@ class SimpleGraph[VertT: Hashable](GraphABC[VertT, frozenset[VertT]]):
             self._vertices |= other.vertices
             self._edges |= other.edges
             return self
+
+    def __copy__(self) -> Self:
+        return type(self)(self._vertices, self._edges)
+
+
+class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
+    """A simple graph (undirected, unweighted, no duplicate edges)."""
+
+    type EdgeT = frozenset[VertT]
+
+    def add_edge(self, source: VertT, dest: VertT) -> None:
+        edge = frozenset((source, dest))
+        if not edge <= self._vertices:
+            s = "Provided vertices are not present in this Graph:"
+            if source not in self._vertices:
+                s += f" source: {source!r}"
+            if dest not in self._vertices:
+                s += f" dest: {dest!r}"
+            raise ValueError(s)
+        if len(edge) < 2:
+            raise ValueError(f"source and dest must be distinct in a simple graph, got ({source!r}, {dest!r})")
+        self._edges.add(edge)
+
+    def neighbors(self, vertex: VertT) -> Set[VertT]:
+        return set.union(*(edge for edge in self._edges if vertex in edge)) - {vertex}
 
     def __sub__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
@@ -303,5 +307,3 @@ class SimpleGraph[VertT: Hashable](GraphABC[VertT, frozenset[VertT]]):
                     self._edges.remove(e)
             return self
 
-    def __copy__(self) -> Self:
-        return type(self)(self._vertices, self._edges)
