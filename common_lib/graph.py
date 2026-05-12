@@ -146,6 +146,14 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         Does not raise an error if the edge is not present."""
 
     @abstractmethod
+    def clear(self) -> None:
+        """Removes all vertices and edges from the graph."""
+
+    @abstractmethod
+    def clear_edges(self) -> None:
+        """Removes all edges from the graph."""
+
+    @abstractmethod
     def neighbors(self, vertex: VertT) -> Iterable[VertT]:
         """Returns an Iterable of vertices which are the destination of an edge starting at the supplied vertex."""
 
