@@ -267,6 +267,13 @@ class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     def discard_vertex(self, vertex: VertT) -> None:
         self._vertices.discard(vertex)
 
+    def clear(self) -> None:
+        self._vertices.clear()
+        self._edges.clear()
+
+    def clear_edges(self) -> None:
+        self._edges.clear()
+
     def __and__(self, other: Self) -> Self:
         if not isinstance(other, type(self)):
             return NotImplemented
