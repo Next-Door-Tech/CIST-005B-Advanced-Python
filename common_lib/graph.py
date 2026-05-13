@@ -128,19 +128,19 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         Does not raise an error if the vertex is not present."""
 
     @abstractmethod
-    def add_edge(self, source: VertT, dest: VertT) -> None:
+    def add_edge(self, head: VertT, tail: VertT) -> None:
         """Adds an edge between the specified vertices.
 
         Overrides may add additional arguments as necessary."""
 
     @abstractmethod
-    def remove_edge(self, source: VertT, dest: VertT) -> None:
+    def remove_edge(self, head: VertT, tail: VertT) -> None:
         """Removes the specified edge from the graph.
 
         :raises KeyError: Specified edge is not in the graph."""
 
     @abstractmethod
-    def discard_edge(self, source: VertT, dest: VertT) -> None:
+    def discard_edge(self, head: VertT, tail: VertT) -> None:
         """Removes the specified edge from the graph.
 
         Does not raise an error if the edge is not present."""
@@ -155,11 +155,11 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
     @abstractmethod
     def neighbors(self, vertex: VertT) -> Iterable[VertT]:
-        """Returns an Iterable of vertices which are the destination of an edge starting at the supplied vertex."""
+        """Returns an Iterable of vertices which share an edge with this vertex, regardless of direction."""
 
-    def connected(self, source: VertT, dest: VertT) -> bool:
-        """Returns `True` if there is an Edge from `source` to `dest`."""
-        return dest in self.neighbors(source)
+    def connected(self, a: VertT, b: VertT) -> bool:
+        """Returns `True` if there is an Edge between `a` and `b`, regardless of direction."""
+        return b in self.neighbors(a)
 
     def __lt__(self, other: Self) -> bool:
         """Returns whether `self` is a proper subgraph of `other`."""
@@ -304,28 +304,28 @@ class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
 
     type EdgeT = frozenset[VertT]
 
-    def add_edge(self, source: VertT, dest: VertT) -> None:
-        edge = frozenset((source, dest))
+    def add_edge(self, a: VertT, b: VertT) -> None:
+        edge = frozenset((a, b))
         if not edge <= self._vertices:
             s = "Provided vertices are not present in this Graph:"
-            if source not in self._vertices:
-                s += f" source: {source!r}"
-            if dest not in self._vertices:
-                s += f" dest: {dest!r}"
+            if a not in self._vertices:
+                s += f" a: {a!r}"
+            if b not in self._vertices:
+                s += f" b: {b!r}"
             raise KeyError(s)
         if len(edge) < 2:
             raise ValueError(
-                f"Source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r}).")
+                f"{type(self).__name__} endpoints must be distinct, got hash({a!r}) == hash({b!r}).")
         self._edges.add(edge)
 
-    def remove_edge(self, source: VertT, dest: VertT) -> None:
+    def remove_edge(self, a: VertT, b: VertT) -> None:
         try:
-            self._edges.remove(frozenset((source, dest)))
+            self._edges.remove(frozenset((a, b)))
         except KeyError:
-            raise KeyError(f"No edge between {source!r} and {dest!r}") from None
+            raise KeyError(f"No edge between {a!r} and {b!r}") from None
 
-    def discard_edge(self, source: VertT, dest: VertT) -> None:
-        self._edges.discard(frozenset((source, dest)))
+    def discard_edge(self, a: VertT, b: VertT) -> None:
+        self._edges.discard(frozenset((a, b)))
 
     def neighbors(self, vertex: VertT) -> set[VertT]:
         return set.union(*(edge for edge in self._edges if vertex in edge)) - {vertex}
@@ -368,27 +368,28 @@ class DiGraph[VertT: Hashable](BaseGraph[VertT, tuple[VertT, VertT]]):
     _vertices: set[VertT]
     _edges: set[EdgeT]
 
-    def add_edge(self, source: VertT, dest: VertT) -> None:
-        edge_set = frozenset((source, dest))
+    def add_edge(self, head: VertT, tail: VertT) -> None:
+        edge_set = frozenset((head, tail))
         if not edge_set <= self._vertices:
             s = "Provided vertices are not present in this Graph:"
-            if source not in self._vertices:
-                s += f" source: {source!r}"
-            if dest not in self._vertices:
-                s += f" dest: {dest!r}"
+            if head not in self._vertices:
+                s += f" head: {head!r}"
+            if tail not in self._vertices:
+                s += f" tail: {tail!r}"
             raise KeyError(s)
         if len(edge_set) < 2:
-            raise ValueError(f"Source and dest must be distinct in a {type(self).__name__}, got ({source!r}, {dest!r})")
-        self._edges.add((source, dest))
+            raise ValueError(
+                f"{type(self).__name__}: head and tail must be distinct, got hash({head!r}) == hash({tail!r})")
+        self._edges.add((head, tail))
 
-    def remove_edge(self, source: VertT, dest: VertT) -> None:
+    def remove_edge(self, head: VertT, tail: VertT) -> None:
         try:
-            self._edges.remove((source, dest))
+            self._edges.remove((head, tail))
         except KeyError:
-            raise KeyError(f"No edge between {source!r} and {dest!r}") from None
+            raise KeyError(f"No edge between {head!r} and {tail!r}") from None
 
-    def discard_edge(self, source: VertT, dest: VertT) -> None:
-        self._edges.discard((source, dest))
+    def discard_edge(self, head: VertT, tail: VertT) -> None:
+        self._edges.discard((head, tail))
 
     def neighbors(self, vertex: VertT) -> set[VertT]:
         return set(e[1] for e in self.edges if vertex is e[0] or vertex == e[0])
