@@ -81,8 +81,8 @@ class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
 
     __slots__ = ()
 
-    @abstractmethod
     @property
+    @abstractmethod
     def weight(self) -> Weight:
         """Return the weight of this edge."""
 
@@ -105,13 +105,13 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         """Returns `True` if the Graph contains the specified Vertex."""
         return vertex in self.vertices
 
-    @abstractmethod
     @property
+    @abstractmethod
     def vertices(self) -> Iterable[VertT]:
         """Returns an Iterable of all vertices in the Graph."""
 
-    @abstractmethod
     @property
+    @abstractmethod
     def edges(self) -> Iterable[EdgeT]:
         """Returns an Iterable of all edges in the Graph."""
 
