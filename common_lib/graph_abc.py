@@ -120,13 +120,13 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
     @abstractmethod
     def remove_vertex(self, vertex: VertT) -> None:
-        """Removes the specified vertex from the graph.
+        """Removes the specified vertex from the graph. Also removes any attached edges.
 
         :raises KeyError: Specified vertex is not in the graph."""
 
     @abstractmethod
     def discard_vertex(self, vertex: VertT) -> None:
-        """Removes the specified vertex from the graph.
+        """Removes the specified vertex from the graph. Also removes any attached edges.
 
         Does not raise an error if the vertex is not present."""
 
