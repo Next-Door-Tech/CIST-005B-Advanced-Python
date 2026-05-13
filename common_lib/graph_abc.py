@@ -58,7 +58,10 @@ class Edge[VertT: Hashable](Protocol):
     though they may be identical for a loopback edge.
 
     Additional information may be assigned to an edge
-    to represent directed edges, weights, etc."""
+    to represent directed edges, weights, etc.
+
+    This may be a proxy type; no guarantees are made regarding how
+    edges are internally represented in a graph."""
 
     __slots__ = ()
 
