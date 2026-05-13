@@ -77,7 +77,7 @@ class Edge[VertT: Hashable](Protocol):
 
 class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
     """A weighted edge in a Graph.
-    Must return the edge weight via the __len__ method."""
+    Must also return the edge weight via the __len__ method."""
 
     __slots__ = ()
 
@@ -86,9 +86,9 @@ class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
     def weight(self) -> Weight:
         """Return the weight of this edge."""
 
-    @abstractmethod
     def __len__(self) -> Weight:
         """Return the weight of this edge."""
+        return self.weight
 
 
 class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
