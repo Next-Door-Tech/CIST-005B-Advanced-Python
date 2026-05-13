@@ -231,3 +231,23 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
     @abstractmethod
     def __copy__(self) -> Self:
         raise NotImplementedError
+
+
+class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
+    """A Graph containing multiple Vertices connected via directed Edges."""
+
+    @abstractmethod
+    def heads(self, vertex: VertT) -> Iterable[VertT]:
+        """Returns an Iterable of vertices which are the head of an edge with this vertex as the tail."""
+
+    def heads_to(self, head: VertT, tail: VertT) -> bool:
+        """Returns whether there is a directed edge from `head` to `tail`."""
+        return head in self.heads(tail)
+
+    @abstractmethod
+    def tails(self, vertex: VertT) -> Iterable[VertT]:
+        """Returns an Iterable of vertices which are the tail of an edge with this vertex as the head."""
+
+    def tails_from(self, tail: VertT, head: VertT) -> bool:
+        """Returns whether there is a directed edge to `tail` from `head`."""
+        return tail in self.tails(head)
