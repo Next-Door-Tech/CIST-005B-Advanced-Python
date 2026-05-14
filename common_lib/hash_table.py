@@ -132,7 +132,9 @@ class HashTable[T: Hashable]:
                 self._get_node(i).floated += 1
 
     def _find_node(self, key: T) -> int:
-        """Returns the index of the node matching key if found, or the index of the first empty node if not found.
+        """Returns the index of the node matching key if found,
+        or the index of the first empty node if not found.
+
         Guaranteed to return an index >= self._hash_key(key); does not wrap.
 
         Also performs a cleanup step if a found node can be moved closer to its hash index."""
