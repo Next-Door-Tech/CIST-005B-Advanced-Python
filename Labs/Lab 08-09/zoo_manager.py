@@ -5,7 +5,7 @@ from itertools import islice
 
 from common_lib.containers import LinkedQueue
 from common_lib.bst import BSTMap
-from common_lib.hash_table import HashTable
+from common_lib.hash_table import HashMap
 
 
 @dataclass
@@ -96,7 +96,7 @@ class CarePriorityQueue(BSTMap[int, LinkedQueue[Animal]]):
 class ZooManager:
     def __init__(self, num_animals: int = 10, basic_pens: int = 4, advanced_pens: int = 3,
                  intensive_pens: int = 2) -> None:
-        self.animals: HashTable[str, Animal] = HashTable()
+        self.animals: HashMap[str, Animal] = HashMap[str, Animal]()
         self.care_queue: CarePriorityQueue = CarePriorityQueue()
         self.basic_pens: int = basic_pens
         self.advanced_pens: int = advanced_pens

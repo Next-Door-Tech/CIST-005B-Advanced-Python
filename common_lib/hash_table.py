@@ -4,7 +4,7 @@ from collections.abc import MutableMapping, Hashable, Generator
 from math import log2, ceil
 
 
-class HashTable[KT: Hashable, VT](MutableMapping[KT, VT]):
+class HashMap[KT: Hashable, VT](MutableMapping[KT, VT]):
     class Node:
         __slots__ = ('_occupied', '_key', '_value', '_floated')
 
