@@ -1,20 +1,262 @@
 from typing import overload
-from .containers import LinkedList
-from collections.abc import MutableMapping, Hashable, Generator
+from collections.abc import Hashable, Iterable, MutableSet, MutableMapping, Generator
 from math import log2, ceil
+from .containers import LinkedList
 
 
-class HashMap[KT: Hashable, VT](MutableMapping[KT, VT]):
-    class Node:
-        __slots__ = ('_occupied', '_key', '_value', '_floated')
+class HashTable[T: Hashable]:
+    """A hash table which does not implement any 'public' insert/remove API.
+    Essentially an ABC, but not d
+    Intended for use as a base class for
+    """
+
+    class Node[U]:
+        __slots__ = ('_occupied', '_key', '_floated')
 
         _occupied: bool
-        _key: KT
-        _value: VT
+        _key: U
         _floated: int
 
         @overload
-        def __init__(self, key: KT, value: VT, *, floated: int = 0) -> None:
+        def __init__(self, key: U, *, floated: int = 0) -> None:
+            ...
+
+        @overload
+        def __init__(self, /, *, floated: int = 0) -> None:
+            ...
+
+        __nothing = object()  # argument sentinel; None is a valid key and value
+
+        def __init__(self, key: U = __nothing, *, floated: int = 0) -> None:
+            self.floated = floated
+            if key is self.__nothing:
+                self._key = None
+                self._occupied = False
+            else:
+                self._key = key
+                self._occupied = True
+
+        @property
+        def key(self) -> U:
+            return self._key
+
+        def set(self, key: U) -> None:
+            self._key = key
+            self._occupied = True
+
+        def peek(self) -> tuple[U]:
+            """Return a tuple which can be unpacked into Node.set() to relocate stored data."""
+            return (self._key,)
+
+        def pop(self) -> tuple[U]:
+            """Clear the node and return a tuple which can be unpacked into Node.set() to relocate stored data."""
+            retval = (self._key,)
+            self.clear()
+            return retval
+
+        def clear(self) -> None:
+            self._key = None
+            self._occupied = False
+
+        @property
+        def floated(self) -> int:
+            return self._floated
+
+        @floated.setter
+        def floated(self, value: int) -> None:
+            if value < 0:
+                raise ValueError(f"{type(self).__qualname__}.floated cannot be negative")
+            self._floated = value
+
+        @property
+        def occupied(self) -> bool:
+            return self._occupied
+
+        def __bool__(self) -> bool:
+            return self._occupied or self._floated > 0
+
+        def __contains__(self, key: U) -> bool:
+            """Returns whether this Node corresponds to key."""
+            return self._occupied and (self._key is key or self._key == key)
+
+    _table: list[Node[T]]
+
+    def __init__(self) -> None:
+        self._table = []
+
+    def _hash_key(self, key: T) -> int:
+        try:
+            return hash(key) % self._maxlen
+        except TypeError as e:
+            raise TypeError(f"cannot use '{type(key).__name__}' as a {type(self).__name__} key ({e!s})") from e
+
+    @property
+    def load_factor(self) -> float:
+        if self._maxlen == 0:
+            return float('inf')
+        else:
+            return len(self) / self._maxlen
+
+    @property
+    def impacted(self) -> bool:
+        return self.load_factor > 0.7
+
+    @property
+    def _maxlen(self) -> int:
+        if not hasattr(self, '_table'):
+            return 0
+        return len(self._table)
+
+    @_maxlen.setter
+    def _maxlen(self, maxlen: int) -> None:
+        maxlen = max(maxlen, len(self), 1)  # disallow setting maxlen to 0 or shrinking below current size
+        maxlen = 4 << ceil(log2(maxlen))  # round up to next power of 2 at least 4 times greater than specified
+
+        if maxlen == self._maxlen:
+            return
+        else:
+            self._resize(maxlen)
+
+    def _resize(self, maxlen: int) -> None:
+        """Resize self._table to the specified maxlen."""
+        buf = (n for n in self._table if n.occupied)  # save reference to original table in generator
+        self._table = [self.Node() for _ in range(maxlen)]
+
+        for node in buf:
+            start = self._hash_key(node.key)
+            hit = self._find_node(node.key)
+
+            self._get_node(hit).set(*(node.peek()))
+
+            for i in range(start, hit):
+                self._get_node(i).floated += 1
+
+    def _find_node(self, key: T) -> int:
+        """Returns the index of the node matching key if found, or the index of the first empty node if not found.
+        Guaranteed to return an index >= self._hash_key(key); does not wrap.
+
+        Also performs a cleanup step if a found node can be moved closer to its hash index."""
+        start = self._hash_key(key)
+
+        target: None | int = None  # first passed empty node
+        for i in range(start, start + self._maxlen):
+            n = self._get_node(i)
+
+            if key in n:  # node found
+                if target is None:  # no need to reshuffle
+                    return i
+                else:  # node can be moved closer to its hash value
+                    self._get_node(target).set(*(n.pop()))
+                    for j in range(target, i):
+                        self._get_node(j).floated -= 1
+                    return target
+
+            elif not n:  # n is empty and nothing has floated past this node
+                return i if target is None else target
+
+            elif not n.occupied and target is None:  # empty node found but need to keep searching
+                target = i
+
+        # iterated through all indices without returning, i.e. self._table is full
+        if target is not None:
+            return target
+        else:
+            raise KeyError(key)
+
+    def _get_node(self, index: int) -> Node[T]:
+        """Returns the Node with the specified index"""
+        return self._table[index % self._maxlen]
+
+    def __len__(self) -> int:
+        return sum(1 for n in self._table if n.occupied)
+
+    def __iter__(self) -> Generator[T]:
+        yield from (n.key for n in self._table if n.occupied)
+
+    def __contains__(self, key: object) -> bool:
+        try:
+            return key == self._get_node(self._find_node(key)).key
+        except TypeError:
+            return False
+
+
+class HashSet[T: Hashable](HashTable[T], MutableSet[T]):
+    class Node[U](HashTable.Node[U]):
+        __slots__ = ()
+        pass
+
+    _table: list[Node[T]]
+
+    def __init__(self, iterable: Iterable[T] | None = None) -> None:
+        super().__init__()
+
+        self._count: int = 0
+
+        if iterable is not None:
+            temp = [*iterable]
+            self._maxlen = len(temp)
+            for i in iterable:
+                self.add(i)
+
+    def add(self, value: T) -> None:
+        if self.impacted:
+            self._maxlen *= 2
+
+        start = self._hash_key(value)
+        hit = self._find_node(value)
+        node = self._get_node(hit)
+
+        if value not in node:
+            node.set(value)
+            for i in range(start, hit):
+                self._get_node(i).floated += 1
+            self._count += 1
+
+    def remove(self, value: T) -> None:
+        start = self._hash_key(value)
+        hit = self._find_node(value)
+        node = self._get_node(hit)
+
+        if value in node:
+            node.clear()
+            for i in range(start, hit):
+                self._get_node(i).floated -= 1
+            self._count -= 1
+
+        else:
+            raise KeyError(value)
+
+    def discard(self, value: T) -> None:
+        try:
+            self.remove(value)
+        except KeyError:
+            pass
+
+    def clear(self) -> None:
+        self._table = []
+        self._count = 0
+
+    def __len__(self) -> int:
+        return self._count
+
+    def __str__(self) -> str:
+        if len(self) > 0:
+            return '{' + ', '.join(f'{key!r}' for key in self) + '}'
+        else:
+            return 'set()'
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({', '.join(f'{key!r}: {self[key]!r}' for key in self)})"
+
+
+class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
+    class Node[KU: Hashable, VU](HashTable.Node[KU]):
+        __slots__ = ('_value',)
+
+        _value: VU
+
+        @overload
+        def __init__(self, key: KU, value: VU, *, floated: int = 0) -> None:
             ...
 
         @overload
@@ -49,41 +291,32 @@ class HashMap[KT: Hashable, VT](MutableMapping[KT, VT]):
             self._value = value
             self._occupied = True
 
+        # noinspection PyMethodOverriding
         def set(self, key: KT, value: VT) -> None:
             self._key = key
             self._value = value
             self._occupied = True
+
+        def peek(self) -> tuple[KU, VU]:
+            """Return a tuple which can be unpacked into Node.set() to relocate stored data."""
+            return self._key, self._value
+
+        def pop(self) -> tuple[KU, VU]:
+            """Clear the node and return a tuple which can be unpacked into Node.set() to relocate stored data."""
+            retval = self._key, self._value
+            self.clear()
+            return retval
 
         def clear(self) -> None:
             self._key = None
             self._value = None
             self._occupied = False
 
-        @property
-        def floated(self) -> int:
-            return self._floated
-
-        @floated.setter
-        def floated(self, value: int) -> None:
-            if value < 0:
-                raise ValueError("HashTable.Node.floated cannot be negative")
-            self._floated = value
-
-        @property
-        def occupied(self) -> bool:
-            return self._occupied
-
-        def __bool__(self) -> bool:
-            return self._occupied or self._floated > 0
-
-        def __contains__(self, key: KT) -> bool:
-            """Returns whether this Node corresponds to key."""
-            return self._occupied and (self._key is key or self._key == key)
-
-    _table: list[Node]
+    _table: list[Node[KT, VT]]
     _history: LinkedList[KT]
 
     def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
         temp = dict(*args, **kwargs)  # used only for parsing arguments
 
         self._history: LinkedList[KT] = LinkedList()  # needed to keep insert order history like dict
@@ -93,77 +326,15 @@ class HashMap[KT: Hashable, VT](MutableMapping[KT, VT]):
             for key in temp.keys():
                 self[key] = temp[key]
 
-    def _hash(self, key: KT) -> int:
-        try:
-            return hash(key) % self._maxlen
-        except TypeError as e:
-            raise TypeError(f"cannot use '{type(key).__name__}' as a {self.__class__.__name__} key ({str(e)})") from e
+    def _resize(self, maxlen: int) -> None:
+        buffer = [(key, self[key]) for key in self]
+        self._table = [self.Node() for _ in range(maxlen)]
+        for key, value in buffer:
+            self[key] = value
 
-    @property
-    def load_factor(self) -> float:
-        if self._maxlen == 0:
-            return float('inf')
-        else:
-            return len(self) / self._maxlen
-
-    @property
-    def impacted(self) -> bool:
-        return self.load_factor > 0.7
-
-    @property
-    def _maxlen(self) -> int:
-        if not hasattr(self, '_table'):
-            return 0
-        return len(self._table)
-
-    @_maxlen.setter
-    def _maxlen(self, maxlen: int) -> None:
-        maxlen = max(maxlen, len(self), 1)  # disallow setting maxlen to 0 or shrinking below current size
-        maxlen = 4 << ceil(log2(maxlen))  # round up to next power of 2 at least 4 times greater than specified
-
-        if maxlen == self._maxlen:
-            return
-        else:
-            buffer = [(key, self[key]) for key in self]
-            self._table = [self.Node() for _ in range(maxlen)]
-            for key, value in buffer:
-                self[key] = value
-
-    def _get_node(self, index: int) -> Node:
+    def _get_node(self, index: int) -> Node[KT, VT]:
+        """Returns the Node with the specified index"""
         return self._table[index % self._maxlen]
-
-    def _find_node(self, key: KT) -> int:
-        """Returns the index of the node matching key if found, or the index of the first empty node if not found.
-        Guaranteed to return an index >= self._hash(key); does not wrap.
-
-        Also performs a cleanup step if a found node can be moved closer to its hash index."""
-        start = self._hash(key)
-
-        target: None | int = None  # first passed empty node
-        for i in range(start, start + self._maxlen):
-            n = self._get_node(i)
-
-            if key in n:  # node found
-                if target is None:  # no need to reshuffle
-                    return i
-                else:  # node can be moved closer to its hash value
-                    self._get_node(target).set(n.key, n.value)
-                    n.clear()
-                    for j in range(target, i):
-                        self._get_node(j).floated -= 1
-                    return target
-
-            elif not n:  # n is empty and nothing has floated past this node
-                return i if target is None else target
-
-            elif not n.occupied and target is None:  # empty node found but need to keep searching
-                target = i
-
-        # iterated through all indices without returning, i.e. self._table is full
-        if target is not None:
-            return target
-        else:
-            raise KeyError(key)
 
     def __getitem__(self, key: KT, /) -> VT:
         n = self._get_node(self._find_node(key))
@@ -177,7 +348,7 @@ class HashMap[KT: Hashable, VT](MutableMapping[KT, VT]):
         if self.impacted:
             self._maxlen *= 2
 
-        start = self._hash(key)
+        start = self._hash_key(key)
         hit = self._find_node(key)
         node = self._get_node(hit)
 
@@ -191,7 +362,7 @@ class HashMap[KT: Hashable, VT](MutableMapping[KT, VT]):
             self._history.append(key)
 
     def __delitem__(self, key: KT, /) -> None:
-        start = self._hash(key)
+        start = self._hash_key(key)
         hit = self._find_node(key)
         node = self._get_node(hit)
 
