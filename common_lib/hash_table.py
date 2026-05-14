@@ -4,6 +4,15 @@ from math import log2, ceil
 from .containers import LinkedList
 
 
+# noinspection PyPep8Naming
+class _MISSING_TYPE:
+    """A sentinel object to detect if a parameter is supplied or not."""
+    pass
+
+
+_MISSING = _MISSING_TYPE()
+
+
 class HashTable[T: Hashable]:
     """A hash table which does not implement any 'public' insert/remove API.
     Essentially an ABC, but not d
@@ -25,11 +34,9 @@ class HashTable[T: Hashable]:
         def __init__(self, /, *, floated: int = 0) -> None:
             ...
 
-        __nothing = object()  # argument sentinel; None is a valid key and value
-
-        def __init__(self, key: U = __nothing, *, floated: int = 0) -> None:
+        def __init__(self, key: U = _MISSING, *, floated: int = 0) -> None:
             self.floated = floated
-            if key is self.__nothing:
+            if key is _MISSING:
                 self._key = None
                 self._occupied = False
             else:
@@ -265,15 +272,13 @@ class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
         def __init__(self, /, *, floated: int = 0) -> None:
             ...
 
-        __nothing = object()  # argument sentinel; None is a valid key and value
-
-        def __init__(self, key: KT = __nothing, value: VT = __nothing, *, floated: int = 0) -> None:
+        def __init__(self, key: KT = _MISSING, value: VT = _MISSING, *, floated: int = 0) -> None:
             self.floated = floated
-            if key is self.__nothing and value is self.__nothing:
+            if key is _MISSING and value is _MISSING:
                 self._key = None
                 self._value = None
                 self._occupied = False
-            elif key is not self.__nothing and value is not self.__nothing:
+            elif key is not _MISSING and value is not _MISSING:
                 self._key = key
                 self._value = value
                 self._occupied = True
