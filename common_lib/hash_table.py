@@ -64,7 +64,7 @@ class HashTable[KT: Hashable, VT](MutableMapping[KT, VT]):
             return self._floated
 
         @floated.setter
-        def floated(self, value) -> None:
+        def floated(self, value: int) -> None:
             if value < 0:
                 raise ValueError("HashTable.Node.floated cannot be negative")
             self._floated = value
