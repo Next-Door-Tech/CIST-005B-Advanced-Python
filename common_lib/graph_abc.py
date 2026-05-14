@@ -1,5 +1,5 @@
 from collections.abc import Iterable, Hashable
-from typing import Protocol, runtime_checkable, Self
+from typing import Protocol, runtime_checkable, Self, overload
 from abc import ABC, abstractmethod
 
 __all__ = ("Weight", "Edge", "WeightedEdge", "GraphABC", "DiGraphABC")
@@ -96,10 +96,28 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
     __slots__ = ()
 
+    @overload
     @abstractmethod
-    def __init__(self, vertices: Iterable[VertT] | None = None, edges: Iterable[EdgeT] | None = None) -> None:
-        """Create a Graph with the provided set of Vertices and Edges between those Vertices.
-        :raises ValueError: A provided Edge's endpoints are not Vertices in this Graph."""
+    def __init__(self, /) -> None:
+        """Create an empty Graph."""
+
+    @overload
+    @abstractmethod
+    def __init__(self, /, edges: Iterable[EdgeT]) -> None:
+        """Create a Graph with the specified edges, creating vertices based on supplied edge endpoints."""
+
+    @overload
+    @abstractmethod
+    def __init__(self, edges: Iterable[EdgeT] = None, vertices: Iterable[VertT] = None, /, *,
+                 strict: bool = True) -> None:
+        """Create a graph with the provided set of vertices and edges between those vertices.
+        :raises ValueError: strict is True and a provided Edge's endpoints are not Vertices in this Graph."""
+
+    @abstractmethod
+    def __init__(self, edges: Iterable[EdgeT] = None, vertices: Iterable[VertT] = None,
+                 /, *, strict: bool = True) -> None:
+        """Create a graph with the provided set of vertices and edges between those vertices.
+        :raises ValueError: strict is True and a provided Edge's endpoints are not Vertices in this Graph."""
 
     def __contains__(self, vertex: VertT | object) -> bool:
         """Returns `True` if the Graph contains the specified Vertex."""
