@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Hashable
+from collections.abc import Iterable, Hashable, Collection
 from typing import Protocol, runtime_checkable, Self, overload
 from abc import ABC, abstractmethod
 
@@ -91,7 +91,7 @@ class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
         return self.weight
 
 
-class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
+class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
     """A Graph containing multiple Vertices connected via edges."""
 
     __slots__ = ()
