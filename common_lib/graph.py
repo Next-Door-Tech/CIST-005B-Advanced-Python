@@ -6,6 +6,8 @@ from common_lib.graph_abc import *
 __all__ = [
     "SimpleGraph",
     "DiGraph",
+    "MultiGraph",
+    "MultiDiGraph"
 ]
 
 
@@ -208,3 +210,11 @@ class DiGraph[VertT: Hashable](BaseGraph[VertT, tuple[VertT, VertT]], DiGraphABC
                 if not all(v in self._vertices for v in e):
                     self._edges.remove(e)
             return self
+
+
+class MultiGraph[VertKT: Hashable](SimpleGraph[VertKT]):
+    """An undirected multigraph."""
+
+
+class MultiDiGraph[VertKT: Hashable, VertVT](MultiGraph, DiGraph):
+    """A directed multigraph."""
