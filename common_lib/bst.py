@@ -890,7 +890,8 @@ class BSTMap[KT: Comparable, VT](BSTBase[KT], MutableMapping[KT, VT]):
     def __init__(self, iterable: Iterable[tuple[KT, VT]], /, **kwargs: VT) -> None:
         ...
 
-    def __init__(self, mapping_or_iterable: Mapping[KT, VT] | Iterable[tuple[KT, VT]] = None, /, **kwargs) -> None:
+    def __init__(self, mapping_or_iterable: Mapping[KT, VT] | Iterable[tuple[KT, VT]] | None = None, /,
+                 **kwargs) -> None:
         if mapping_or_iterable is None:
             pass
         elif hasattr(mapping_or_iterable, 'keys') and hasattr(mapping_or_iterable, '__getitem__'):
