@@ -148,6 +148,10 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         Does not raise an error if the vertex is not present."""
 
     @abstractmethod
+    def has_vertex(self, vertex: VertT) -> bool:
+        """Returns whether the graph has a given vertex."""
+
+    @abstractmethod
     def add_edge(self, head: VertT, tail: VertT) -> None:
         """Adds an edge between the specified vertices.
 
@@ -164,6 +168,10 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         """Removes the specified edge from the graph.
 
         Does not raise an error if the edge is not present."""
+
+    @abstractmethod
+    def has_edge(self, head: VertT, tail: VertT) -> bool:
+        """Returns whether the graph has an edge from head to tail."""
 
     @abstractmethod
     def is_multigraph(self) -> bool:
@@ -265,20 +273,20 @@ class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     """A Graph containing multiple vertices connected via directed edges."""
 
     @abstractmethod
-    def heads(self, vertex: VertT) -> Iterable[VertT]:
-        """Returns an Iterable of vertices which are the head of an edge with this vertex as the tail."""
-
-    def heads_to(self, head: VertT, tail: VertT) -> bool:
-        """Returns whether there is a directed edge from `head` to `tail`."""
-        return head in self.heads(tail)
-
-    @abstractmethod
-    def tails(self, vertex: VertT) -> Iterable[VertT]:
+    def successors(self, vertex: VertT) -> Iterable[VertT]:
         """Returns an Iterable of vertices which are the tail of an edge with this vertex as the head."""
 
-    def tails_from(self, tail: VertT, head: VertT) -> bool:
-        """Returns whether there is a directed edge to `tail` from `head`."""
-        return tail in self.tails(head)
+    def has_successor(self, head: VertT, tail: VertT) -> bool:
+        """Returns whether there is a directed edge from `head` to `tail`. (head->tail)"""
+        return tail in self.successors(head)
+
+    @abstractmethod
+    def predecessors(self, vertex: VertT) -> Iterable[VertT]:
+        """Returns an Iterable of vertices which are the head of an edge with this vertex as the tail."""
+
+    def has_predecessor(self, tail: VertT, head: VertT) -> bool:
+        """Returns whether there is a directed edge to `tail` from `head`. (tail<-head)"""
+        return tail in self.successors(head)
 
     def is_directed(self) -> bool:
         """Return whether this graph is a multigraph."""
