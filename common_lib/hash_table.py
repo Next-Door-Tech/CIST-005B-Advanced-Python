@@ -339,7 +339,7 @@ class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
         for key, value in buffer:
             self[key] = value
 
-    def _get_node(self, index: int) -> Node[KT, VT]:
+    def _get_node(self, index: int) -> Node[KT, VT]:  # override return type
         """Returns the Node with the specified index"""
         return self._table[index % self._maxlen]
 
