@@ -255,7 +255,7 @@ class HashSet[T: Hashable](HashTable[T], MutableSet[T]):
             return 'set()'
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({', '.join(f'{key!r}: {self[key]!r}' for key in self)})"
+        return f"{self.__class__.__name__}({', '.join(f'{key!r}' for key in self)})"
 
 
 class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
