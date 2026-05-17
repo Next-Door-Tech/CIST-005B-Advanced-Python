@@ -1,5 +1,5 @@
 from typing import overload
-from collections.abc import Hashable, Iterable, MutableSet, MutableMapping, Generator
+from collections.abc import Hashable, Iterable, MutableSet, Mapping, MutableMapping, Generator
 from math import log2, ceil
 from common_lib.containers import LinkedList
 
@@ -322,16 +322,58 @@ class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
     _table: list[Node[KT, VT]]
     _history: LinkedList[KT]
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__()
-        temp = dict(*args, **kwargs)  # used only for parsing arguments
+    @overload
+    def __init__(self, /) -> None:
+        ...
 
+    @overload
+    def __init__(self, /, **kwargs: VT) -> None:
+        ...
+
+    @overload
+    def __init__(self, mapping: Mapping[KT, VT], /, **kwargs: VT) -> None:
+        ...
+
+    @overload
+    def __init__(self, iterable: Iterable[tuple[KT, VT]], /, **kwargs: VT) -> None:
+        ...
+
+    def __init__(self, mapping_or_iterable: Mapping[KT, VT] | Iterable[tuple[KT, VT]] | None = None, /,
+                 **kwargs) -> None:
+        super().__init__()
         self._history: LinkedList[KT] = LinkedList()  # needed to keep insert order history like dict
 
-        if len(temp) > 0:  # if parsed arguments result in a non-empty dict, initialize
-            self._maxlen = len(temp)
-            for key in temp.keys():
-                self[key] = temp[key]
+        if mapping_or_iterable is None:
+            pass
+        elif hasattr(mapping_or_iterable, 'keys') and hasattr(mapping_or_iterable, '__getitem__'):
+            mapping_or_iterable: Mapping
+            for key in mapping_or_iterable.keys():
+                self[key] = mapping_or_iterable[key]
+        elif hasattr(mapping_or_iterable, '__iter__'):
+            mapping_or_iterable: Iterable
+            try:
+                for i, (key, value) in enumerate(mapping_or_iterable):
+                    self[key] = value
+            except ValueError as e:
+                try:
+                    # noinspection PyUnboundLocalVariable
+                    i
+                except NameError:
+                    i = 0
+
+                try:
+                    if "values to unpack" in e.args[0]:
+                        raise ValueError(f"Iterable element #{i} has incorrect length; 2 is required") from e
+                except AttributeError:
+                    raise e from None
+                else:
+                    raise e from None
+        else:
+            raise TypeError(f"{type(self).__name__} expected a Mapping or Iterable of (key, value) pairs, "
+                            f"got '{type(mapping_or_iterable)}'")
+
+        for arg in kwargs:
+            self[arg] = kwargs[arg]
 
     def _resize(self, maxlen: int) -> None:
         buffer = [(key, self[key]) for key in self]
