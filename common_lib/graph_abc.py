@@ -67,7 +67,7 @@ class Edge[VertT: Hashable](Protocol):
 
     @abstractmethod
     def __contains__(self, vertex: VertT) -> bool:
-        """Return True if vertex is either the start or end of this edge."""
+        """Return True if vertex is either the head or tail of this edge."""
 
     @abstractmethod
     def __eq__(self, other: Self | object) -> bool:
@@ -92,7 +92,7 @@ class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
 
 
 class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
-    """A Graph containing multiple Vertices connected via Edges."""
+    """A Graph containing multiple Vertices connected via edges."""
 
     __slots__ = ()
 
@@ -111,16 +111,16 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
     def __init__(self, edges: Iterable[EdgeT] = None, vertices: Iterable[VertT] = None, /, *,
                  strict: bool = True) -> None:
         """Create a graph with the provided set of vertices and edges between those vertices.
-        :raises ValueError: strict is True and a provided Edge's endpoints are not Vertices in this Graph."""
+        :raises ValueError: strict is True and a provided edge's endpoints are not vertices in this Graph."""
 
     @abstractmethod
     def __init__(self, edges: Iterable[EdgeT] = None, vertices: Iterable[VertT] = None,
                  /, *, strict: bool = True) -> None:
         """Create a graph with the provided set of vertices and edges between those vertices.
-        :raises ValueError: strict is True and a provided Edge's endpoints are not Vertices in this Graph."""
+        :raises ValueError: strict is True and a provided edge's endpoints are not vertices in this Graph."""
 
     def __contains__(self, vertex: VertT | object) -> bool:
-        """Returns `True` if the Graph contains the specified Vertex."""
+        """Returns `True` if the Graph contains the specified vertex."""
         return vertex in self.vertices
 
     @property
@@ -190,7 +190,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         """Returns an Iterable of vertices which share an edge with this vertex, regardless of direction."""
 
     def connected(self, a: VertT, b: VertT) -> bool:
-        """Returns `True` if there is an Edge between `a` and `b`, regardless of direction."""
+        """Returns `True` if there is an edge between `a` and `b`, regardless of direction."""
         return b in self.neighbors(a)
 
     def __lt__(self, other: Self) -> bool:
@@ -263,7 +263,7 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
 
 
 class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
-    """A Graph containing multiple Vertices connected via directed Edges."""
+    """A Graph containing multiple vertices connected via directed edges."""
 
     @abstractmethod
     def heads(self, vertex: VertT) -> Iterable[VertT]:
