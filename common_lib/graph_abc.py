@@ -104,13 +104,13 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
 
     @overload
     @abstractmethod
-    def __init__(self, edges: Iterable[EdgeT] = None, vertices: Iterable[VertT] = None, /, *,
+    def __init__(self, edges: Iterable[EdgeT] | None = None, vertices: Iterable[VertT] | None = None, /, *,
                  strict: bool = True) -> None:
         """Create a graph with the provided set of vertices and edges between those vertices.
         :raises ValueError: strict is True and a provided edge's endpoints are not vertices in this Graph."""
 
     @abstractmethod
-    def __init__(self, edges: Iterable[EdgeT] = None, vertices: Iterable[VertT] = None,
+    def __init__(self, edges: Iterable[EdgeT] | None = None, vertices: Iterable[VertT] | None = None,
                  /, *, strict: bool = True) -> None:
         """Create a graph with the provided set of vertices and edges between those vertices.
         :raises ValueError: strict is True and a provided edge's endpoints are not vertices in this Graph."""
