@@ -170,6 +170,14 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](ABC):
         Does not raise an error if the edge is not present."""
 
     @abstractmethod
+    def is_multigraph(self) -> bool:
+        """Return whether this graph is a multigraph."""
+
+    @abstractmethod
+    def is_directed(self) -> bool:
+        """Return whether this graph is a multigraph."""
+
+    @abstractmethod
     def clear(self) -> None:
         """Removes all vertices and edges from the graph."""
 
@@ -272,3 +280,7 @@ class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     def tails_from(self, tail: VertT, head: VertT) -> bool:
         """Returns whether there is a directed edge to `tail` from `head`."""
         return tail in self.tails(head)
+
+    def is_directed(self) -> bool:
+        """Return whether this graph is a multigraph."""
+        return True
