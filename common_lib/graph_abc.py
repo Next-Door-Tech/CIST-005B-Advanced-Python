@@ -54,8 +54,8 @@ class Weight(Protocol):
         """other - self"""
 
 
-class Edge[VertT: Hashable](Protocol):
-    """An edge in a Graph. Must contain two vertices as endpoints,
+class Edge[NodeT: Hashable](Protocol):
+    """An edge in a Graph. Must contain two nodes as endpoints,
     though they may be identical for a loopback edge.
 
     Additional information may be assigned to an edge
@@ -67,8 +67,8 @@ class Edge[VertT: Hashable](Protocol):
     __slots__ = ()
 
     @abstractmethod
-    def __contains__(self, vertex: VertT) -> bool:
-        """Return True if vertex is either the head or tail of this edge."""
+    def __contains__(self, node: NodeT) -> bool:
+        """Return True if node is either the head or tail of this edge."""
 
     @abstractmethod
     def __eq__(self, other: Self | object) -> bool:
@@ -76,7 +76,7 @@ class Edge[VertT: Hashable](Protocol):
         the same endpoints and any additional values are equal."""
 
 
-class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
+class WeightedEdge[NodeT: Hashable](Edge[NodeT], Protocol):
     """A weighted edge in a Graph."""
 
     __slots__ = ()
@@ -87,8 +87,8 @@ class WeightedEdge[VertT: Hashable](Edge[VertT], Protocol):
         """Return the weight of this edge."""
 
 
-class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
-    """A Graph containing multiple Vertices connected via edges."""
+class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
+    """A Graph containing multiple nodes connected via edges."""
 
     __slots__ = ()
 
@@ -100,29 +100,51 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
     @overload
     @abstractmethod
     def __init__(self, /, edges: Iterable[EdgeT]) -> None:
-        """Create a Graph with the specified edges, creating vertices based on supplied edge endpoints."""
+        """Create a Graph with the specified edges, creating nodes based on supplied edge endpoints."""
 
     @overload
     @abstractmethod
-    def __init__(self, edges: Iterable[EdgeT] | None = None, vertices: Iterable[VertT] | None = None, /, *,
+    def __init__(self, edges: Iterable[EdgeT] | None = None, nodes: Iterable[NodeT] | None = None, /, *,
                  strict: bool = True) -> None:
-        """Create a graph with the provided set of vertices and edges between those vertices.
-        :raises ValueError: strict is True and a provided edge's endpoints are not vertices in this Graph."""
+        """Create a graph with the provided set of nodes and edges between those nodes.
+        :raises ValueError: strict is True and a provided edge's endpoints are not nodes in this Graph."""
 
     @abstractmethod
-    def __init__(self, edges: Iterable[EdgeT] | None = None, vertices: Iterable[VertT] | None = None,
+    def __init__(self, edges: Iterable[EdgeT] | None = None, nodes: Iterable[NodeT] | None = None,
                  /, *, strict: bool = True) -> None:
-        """Create a graph with the provided set of vertices and edges between those vertices.
-        :raises ValueError: strict is True and a provided edge's endpoints are not vertices in this Graph."""
+        """Create a graph with the provided set of nodes and edges between those nodes.
+        :raises ValueError: strict is True and a provided edge's endpoints are not nodes in this Graph."""
 
-    def __contains__(self, vertex: VertT | object) -> bool:
-        """Returns `True` if the Graph contains the specified vertex."""
-        return vertex in self.vertices
+    def __contains__(self, node: NodeT | object) -> bool:
+        """Returns `True` if the Graph contains the specified node."""
+        return node in self.nodes
 
     @property
     @abstractmethod
-    def vertices(self) -> Iterable[VertT]:
-        """Returns an Iterable of all vertices in the Graph."""
+    def nodes(self) -> Iterable[NodeT]:
+        """Returns an Iterable of all nodes in the Graph."""
+
+    @abstractmethod
+    def add_node(self, node: NodeT) -> None:
+        """Adds the specified node to the graph.
+
+        Overrides may add additional arguments as necessary."""
+
+    @abstractmethod
+    def remove_node(self, node: NodeT) -> None:
+        """Removes the specified node from the graph. Also removes any attached edges.
+
+        :raises KeyError: Specified node is not in the graph."""
+
+    @abstractmethod
+    def discard_node(self, node: NodeT) -> None:
+        """Removes the specified node from the graph. Also removes any attached edges.
+
+        Does not raise an error if the node is not present."""
+
+    @abstractmethod
+    def has_node(self, node: NodeT) -> bool:
+        """Returns whether the graph has a given node."""
 
     @property
     @abstractmethod
@@ -130,47 +152,25 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         """Returns an Iterable of all edges in the Graph."""
 
     @abstractmethod
-    def add_vertex(self, vertex: VertT) -> None:
-        """Adds the specified vertex to the graph.
+    def add_edge(self, head: NodeT, tail: NodeT) -> None:
+        """Adds an edge between the specified nodes.
 
         Overrides may add additional arguments as necessary."""
 
     @abstractmethod
-    def remove_vertex(self, vertex: VertT) -> None:
-        """Removes the specified vertex from the graph. Also removes any attached edges.
-
-        :raises KeyError: Specified vertex is not in the graph."""
-
-    @abstractmethod
-    def discard_vertex(self, vertex: VertT) -> None:
-        """Removes the specified vertex from the graph. Also removes any attached edges.
-
-        Does not raise an error if the vertex is not present."""
-
-    @abstractmethod
-    def has_vertex(self, vertex: VertT) -> bool:
-        """Returns whether the graph has a given vertex."""
-
-    @abstractmethod
-    def add_edge(self, head: VertT, tail: VertT) -> None:
-        """Adds an edge between the specified vertices.
-
-        Overrides may add additional arguments as necessary."""
-
-    @abstractmethod
-    def remove_edge(self, head: VertT, tail: VertT) -> None:
+    def remove_edge(self, head: NodeT, tail: NodeT) -> None:
         """Removes the specified edge from the graph.
 
         :raises KeyError: Specified edge is not in the graph."""
 
     @abstractmethod
-    def discard_edge(self, head: VertT, tail: VertT) -> None:
+    def discard_edge(self, head: NodeT, tail: NodeT) -> None:
         """Removes the specified edge from the graph.
 
         Does not raise an error if the edge is not present."""
 
     @abstractmethod
-    def has_edge(self, head: VertT, tail: VertT) -> bool:
+    def has_edge(self, head: NodeT, tail: NodeT) -> bool:
         """Returns whether the graph has an edge from head to tail."""
 
     @abstractmethod
@@ -183,17 +183,17 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
 
     @abstractmethod
     def clear(self) -> None:
-        """Removes all vertices and edges from the graph."""
+        """Removes all nodes and edges from the graph."""
 
     @abstractmethod
     def clear_edges(self) -> None:
         """Removes all edges from the graph."""
 
     @abstractmethod
-    def neighbors(self, vertex: VertT) -> Iterable[VertT]:
-        """Returns an Iterable of vertices which share an edge with this vertex, regardless of direction."""
+    def neighbors(self, node: NodeT) -> Iterable[NodeT]:
+        """Returns an Iterable of nodes which share an edge with this node, regardless of direction."""
 
-    def connected(self, a: VertT, b: VertT) -> bool:
+    def connected(self, a: NodeT, b: NodeT) -> bool:
         """Returns `True` if there is an edge between `a` and `b`, regardless of direction."""
         return b in self.neighbors(a)
 
@@ -201,30 +201,30 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         """Returns whether `self` is a proper subgraph of `other`."""
         if not isinstance(other, type(self)):
             return NotImplemented
-        return self.edges < other.edges and self.vertices < other.vertices
+        return self.edges < other.edges and self.nodes < other.nodes
 
     def __le__(self, other: Self) -> bool:
         """Returns whether `self` is an improper subgraph of `other`."""
         if not isinstance(other, type(self)):
             return NotImplemented
-        return self.edges <= other.edges and self.vertices <= other.vertices
+        return self.edges <= other.edges and self.nodes <= other.nodes
 
     def __eq__(self, other: Self | object) -> bool:
         if not isinstance(other, type(self)):
             return NotImplemented
-        return other is self or (self.vertices == other.vertices and self.edges == other.edges)
+        return other is self or (self.nodes == other.nodes and self.edges == other.edges)
 
     def __ge__(self, other: Self) -> bool:
         """Returns whether `self` is an improper supergraph of `other`."""
         if not isinstance(other, type(self)):
             return NotImplemented
-        return self.edges >= other.edges and self.vertices >= other.vertices
+        return self.edges >= other.edges and self.nodes >= other.nodes
 
     def __gt__(self, other: Self) -> bool:
         """Returns whether `self` is a proper supergraph of `other`."""
         if not isinstance(other, type(self)):
             return NotImplemented
-        return self.edges > other.edges and self.vertices > other.vertices
+        return self.edges > other.edges and self.nodes > other.nodes
 
     @abstractmethod
     def __and__(self, other: Self) -> Self:
@@ -269,22 +269,22 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
 GraphABC.register(nx.Graph)
 
 
-class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
-    """A Graph containing multiple vertices connected via directed edges."""
+class DiGraphABC[NodeT: Hashable, EdgeT: Edge](GraphABC[NodeT, EdgeT], ABC):
+    """A Graph containing multiple nodes connected via directed edges."""
 
     @abstractmethod
-    def successors(self, vertex: VertT) -> Iterable[VertT]:
-        """Returns an Iterable of vertices which are the tail of an edge with this vertex as the head."""
+    def successors(self, node: NodeT) -> Iterable[NodeT]:
+        """Returns an Iterable of nodes which are the tail of an edge with this node as the head."""
 
-    def has_successor(self, head: VertT, tail: VertT) -> bool:
+    def has_successor(self, head: NodeT, tail: NodeT) -> bool:
         """Returns whether there is a directed edge from `head` to `tail`. (head->tail)"""
         return tail in self.successors(head)
 
     @abstractmethod
-    def predecessors(self, vertex: VertT) -> Iterable[VertT]:
-        """Returns an Iterable of vertices which are the head of an edge with this vertex as the tail."""
+    def predecessors(self, node: NodeT) -> Iterable[NodeT]:
+        """Returns an Iterable of nodes which are the head of an edge with this node as the tail."""
 
-    def has_predecessor(self, tail: VertT, head: VertT) -> bool:
+    def has_predecessor(self, tail: NodeT, head: NodeT) -> bool:
         """Returns whether there is a directed edge to `tail` from `head`. (tail<-head)"""
         return tail in self.successors(head)
 
