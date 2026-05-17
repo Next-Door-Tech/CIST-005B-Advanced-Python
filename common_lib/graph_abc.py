@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Hashable, Collection
 from typing import Protocol, runtime_checkable, Self, overload
 from abc import ABC, abstractmethod
+import networkx as nx
 
 __all__ = ("Weight", "Edge", "WeightedEdge", "GraphABC", "DiGraphABC")
 
@@ -257,6 +258,9 @@ class GraphABC[VertT: Hashable, EdgeT: Edge](Collection[VertT], ABC):
         raise NotImplementedError
 
 
+GraphABC.register(nx.Graph)
+
+
 class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     """A Graph containing multiple vertices connected via directed edges."""
 
@@ -279,3 +283,6 @@ class DiGraphABC[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
     def is_directed(self) -> bool:
         """Return whether this graph is a multigraph."""
         return True
+
+
+DiGraphABC.register(nx.DiGraph)
