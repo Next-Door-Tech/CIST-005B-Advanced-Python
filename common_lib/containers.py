@@ -420,7 +420,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
 
         _forward: Node[U] | None
 
-        def __init__(self, value: U, forward: Node[U] = None) -> None:
+        def __init__(self, value: U, forward: Node[U] | None = None) -> None:
             self._value: U = value
             self.forward = forward
 
@@ -802,7 +802,7 @@ class LinkedList[T](MutableSequence[T], _CommonMethods[T]):
     _sentinel: Sentinel[T]
     _count: int
 
-    def __init__(self, iterable: Iterable[T] = None) -> None:
+    def __init__(self, iterable: Iterable[T] | None = None) -> None:
         self._count = 0
         self._sentinel = self.Sentinel()
 
