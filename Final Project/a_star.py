@@ -62,14 +62,14 @@ def a_star[NodeT: Hashable](
         @dataclass(order=True, repr=True)
         class Item:
             item: NodeT_ = field(compare=False)
-            weight: float = field(compare=True)
+            heuristic: float = field(compare=True)
 
-            def __init__(self, item: NodeT_, weight: float | None = None) -> None:
+            def __init__(self, item: NodeT_, heuristic_: float | None = None) -> None:
                 self.item = item
-                if weight is None:
-                    self.weight = score(item)
+                if heuristic_ is None:
+                    self.heuristic = score(item)
                 else:
-                    self.weight = weight
+                    self.heuristic = heuristic_
 
         heapify = heapq.heapify
 
