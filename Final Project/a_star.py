@@ -61,7 +61,7 @@ def a_star[NodeT: Hashable](
             item: NodeT_ = field(compare=False)
             weight: float = field(compare=True)
 
-            def __init__(self, item: NodeT_, weight: float = None) -> None:
+            def __init__(self, item: NodeT_, weight: float | None = None) -> None:
                 self.item = item
                 if weight is None:
                     self.weight = score(item)
