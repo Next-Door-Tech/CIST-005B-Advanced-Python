@@ -10,8 +10,8 @@ import osmnx as ox
 import heapq
 import random
 
-# from common_lib.containers import LinkedQueue
-# from common_lib.graph import DiGraph
+from common_lib.containers import LinkedQueue
+from common_lib.graph import DiGraph
 from common_lib.hash_table import HashMap
 
 place = "West Valley College, Saratoga, California, USA"
@@ -31,12 +31,14 @@ def a_star[NodeT: Hashable](
     if isinstance(weight, str):
         weight_attr = weight
 
-        if G.is_multigraph():
+        if graph.is_multigraph():
             def weight(src: NodeT, dest: NodeT) -> float:
-                return min(edge.get(weight_attr, 1) for edge in G.get_edge_data(src, dest).values())
+                nonlocal graph
+                return min(edge.get(weight_attr, 1) for edge in graph.get_edge_data(src, dest).values())
         else:
-            def weight(src: NodeT, dest: NodeT, ) -> float:
-                return G.get_edge_data(src, dest).get(weight_attr, 1)
+            def weight(src: NodeT, dest: NodeT) -> float:
+                nonlocal graph
+                return graph.get_edge_data(src, dest).get(weight_attr, 1)
 
     def distance(node: NodeT) -> float:
         nonlocal source
