@@ -15,8 +15,7 @@ _MISSING = _MISSING_TYPE()
 
 class HashTable[T: Hashable]:
     """A hash table which does not implement any 'public' insert/remove API.
-    Essentially an ABC, but not d
-    Intended for use as a base class for
+    Intended for use as a base class for other HashTable types.
     """
 
     class Node[U]:
