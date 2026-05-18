@@ -48,6 +48,7 @@ class HashTable[T: Hashable]:
             return self._key
 
         def set(self, key: U) -> None:
+            """Set the data in the node to the specified state."""
             self._key = key
             self._occupied = True
 
