@@ -12,6 +12,7 @@ import random
 
 # from common_lib.containers import LinkedQueue
 # from common_lib.graph import DiGraph
+from common_lib.hash_table import HashMap
 
 place = "West Valley College, Saratoga, California, USA"
 
@@ -25,7 +26,7 @@ def a_star[NodeT: Hashable](
         weight: str | Callable[[NodeT, NodeT], float] = "weight",
         heuristic: Callable[[NodeT, NodeT], float] = lambda s, e: 0
 ) -> list[NodeT]:
-    parent: dict[NodeT, NodeT] = {}
+    parent: HashMap[NodeT, NodeT] = HashMap()
 
     if isinstance(weight, str):
         weight_attr = weight
