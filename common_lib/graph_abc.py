@@ -69,11 +69,13 @@ class Edge[NodeT: Hashable](Protocol):
     @abstractmethod
     def __contains__(self, node: NodeT) -> bool:
         """Return True if node is either the head or tail of this edge."""
+        raise NotImplementedError
 
     @abstractmethod
     def __eq__(self, other: Self | object) -> bool:
         """Return True if the edges are equal, i.e. both edges have
         the same endpoints and any additional values are equal."""
+        raise NotImplementedError
 
 
 class WeightedEdge[NodeT: Hashable](Edge[NodeT], Protocol):
@@ -85,6 +87,7 @@ class WeightedEdge[NodeT: Hashable](Edge[NodeT], Protocol):
     @abstractmethod
     def weight(self) -> Weight:
         """Return the weight of this edge."""
+        raise NotImplementedError
 
 
 class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
@@ -114,6 +117,7 @@ class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
                  /, *, strict: bool = True) -> None:
         """Create a graph with the provided set of nodes and edges between those nodes.
         :raises ValueError: strict is True and a provided edge's endpoints are not nodes in this Graph."""
+        raise NotImplementedError
 
     def __contains__(self, node: NodeT | object) -> bool:
         """Returns `True` if the Graph contains the specified node."""
@@ -128,71 +132,85 @@ class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
     @abstractmethod
     def nodes(self) -> Iterable[NodeT]:
         """Returns an Iterable of all nodes in the Graph."""
+        raise NotImplementedError
 
     @abstractmethod
     def add_node(self, node: NodeT) -> None:
         """Adds the specified node to the graph.
 
         Overrides may add additional arguments as necessary."""
+        raise NotImplementedError
 
     @abstractmethod
     def remove_node(self, node: NodeT) -> None:
         """Removes the specified node from the graph. Also removes any attached edges.
 
         :raises KeyError: Specified node is not in the graph."""
+        raise NotImplementedError
 
     @abstractmethod
     def discard_node(self, node: NodeT) -> None:
         """Removes the specified node from the graph. Also removes any attached edges.
 
         Does not raise an error if the node is not present."""
+        raise NotImplementedError
 
     @abstractmethod
     def has_node(self, node: NodeT) -> bool:
         """Returns whether the graph has a given node."""
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def edges(self) -> Iterable[EdgeT]:
         """Returns an Iterable of all edges in the Graph."""
+        raise NotImplementedError
 
     @abstractmethod
     def add_edge(self, head: NodeT, tail: NodeT) -> None:
         """Adds an edge between the specified nodes.
 
         Overrides may add additional arguments as necessary."""
+        raise NotImplementedError
 
     @abstractmethod
     def remove_edge(self, head: NodeT, tail: NodeT) -> None:
         """Removes the specified edge from the graph.
 
         :raises KeyError: Specified edge is not in the graph."""
+        raise NotImplementedError
 
     @abstractmethod
     def discard_edge(self, head: NodeT, tail: NodeT) -> None:
         """Removes the specified edge from the graph.
 
         Does not raise an error if the edge is not present."""
+        raise NotImplementedError
 
     @abstractmethod
     def has_edge(self, head: NodeT, tail: NodeT) -> bool:
         """Returns whether the graph has an edge from head to tail."""
+        raise NotImplementedError
 
     @abstractmethod
     def is_multigraph(self) -> bool:
         """Return whether this graph is a multigraph."""
+        raise NotImplementedError
 
     @abstractmethod
     def is_directed(self) -> bool:
         """Return whether this graph is a multigraph."""
+        raise NotImplementedError
 
     @abstractmethod
     def clear(self) -> None:
         """Removes all nodes and edges from the graph."""
+        raise NotImplementedError
 
     @abstractmethod
     def clear_edges(self) -> None:
         """Removes all edges from the graph."""
+        raise NotImplementedError
 
     @abstractmethod
     def neighbors(self, node: NodeT) -> Iterable[NodeT]:
