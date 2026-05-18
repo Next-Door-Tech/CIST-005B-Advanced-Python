@@ -185,7 +185,7 @@ class HashTable[T: Hashable]:
     def __contains__(self, key: object) -> bool:
         try:
             return key == self._get_node(self._find_node(key)).key
-        except TypeError:
+        except (TypeError, ZeroDivisionError):
             return False
 
 
