@@ -119,6 +119,11 @@ class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
         """Returns `True` if the Graph contains the specified node."""
         return node in self.nodes
 
+    @abstractmethod
+    def __len__(self) -> int:
+        """Returns the number of nodes in the graph."""
+        raise NotImplementedError
+
     @property
     @abstractmethod
     def nodes(self) -> Iterable[NodeT]:
