@@ -62,7 +62,7 @@ class _MappingProxy[KT: Hashable, VT](Mapping[KT, VT]):
     def __len__(self) -> int:
         return self._instance.__len__()
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[KT]:
         yield from self._instance.keys()
 
 
