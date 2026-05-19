@@ -1,6 +1,7 @@
-from bst import AVLSeq
 from itertools import chain
 import re
+
+from common_lib.bst import AVLSeq
 
 dictionary: AVLSeq[str] = AVLSeq()
 

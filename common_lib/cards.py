@@ -6,8 +6,8 @@ from random import shuffle
 from types import NotImplementedType
 from typing import overload, Self, Protocol, cast
 from collections.abc import MutableSequence, Iterable, Collection, Generator
-from .containers import cirque, LinkedList
-from .formatspec import FormatSpec
+from common_lib.containers import cirque, LinkedList
+from common_lib.formatspec import FormatSpec
 import sys
 
 if sys.version_info < (3, 15, 0):  # frozendict is a built-in type on python 3.15, else install frozendict from PyPI

@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from weakref import WeakSet
 
-from .hash_table import HashSet, HashMap
-from .graph_abc import *
+from common_lib.hash_table import HashSet, HashMap
+from common_lib.graph_abc import *
 
 __all__ = [
     "Graph",
