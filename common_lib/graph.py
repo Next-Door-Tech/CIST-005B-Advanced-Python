@@ -1,12 +1,11 @@
 from collections.abc import Iterable, Hashable, Generator, Mapping, MutableMapping
 from numbers import Real
-from typing import Self, NoReturn, overload, Unpack, Any
+from typing import Self, Any, NoReturn
 from abc import ABC, abstractmethod
 
-from dataclasses import dataclass, field
 from weakref import WeakSet
 
-from common_lib.hash_table import HashSet, HashMap
+from common_lib.hash_table import HashMap
 from common_lib.graph_abc import *
 
 __all__ = [
@@ -15,6 +14,56 @@ __all__ = [
     "MultiGraph",
     "MultiDiGraph"
 ]
+
+
+class _MappingProxy[KT: Hashable, VT](Mapping[KT, VT]):
+    """A read-only mapping proxy view descriptor."""
+
+    __slots__ = '_instance'
+
+    _instance: Mapping[KT, VT]
+    __objclass__: type[Mapping[KT, VT]]
+
+    def __init__(self, instance: Mapping[KT, VT] | None = None, owner: type[Mapping[KT, VT]] | None = None) -> None:
+        if instance is not None:
+            self._instance = instance
+        if owner is not None:
+            self.__objclass__ = owner
+
+    def __set_name__(self, owner: type[Mapping[KT, VT]], name: str) -> None:
+        class _NamedMappingProxy(type(self)):
+            """A read-only mapping proxy which has been assigned to a member of a class."""
+            __doc__ = type(self).__doc__
+            __name__ = name
+            __qualname__ = f"{owner.__qualname__}.{type(self).__name__}"
+
+        setattr(owner, name, _NamedMappingProxy(None, owner))
+
+    def __get__(self, instance: Mapping[KT, VT], owner: type[Mapping[KT, VT]]) -> Self:
+        if instance is None:
+            return self
+        else:
+            class _BoundMappingProxy(type(self)):
+                """A read-only mapping proxy which has been bound to an instance."""
+                __doc__ = type(self).__doc__
+                __qualname__ = f"{type(self).__qualname__}.{__name__}"
+
+            return _BoundMappingProxy(instance, owner)
+
+    def __set__(self, instance: Mapping[KT, VT], value) -> NoReturn:
+        raise AttributeError
+
+    def __delete__(self, instance: Mapping[KT, VT]) -> NoReturn:
+        raise AttributeError
+
+    def __getitem__(self, key: KT, /) -> VT:
+        return self._instance.__getitem__(key)
+
+    def __len__(self) -> int:
+        return self._instance.__len__()
+
+    def __iter__(self):
+        yield from self._instance.keys()
 
 
 class _Node[NodeKT: Hashable, DataKT: Hashable, DataVT](MutableMapping[DataKT, DataVT]):
@@ -183,18 +232,23 @@ class _MultiDiEdge[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT]
 class _EdgesABC[NodeKT: Hashable, EdgeKT: Hashable, EdgeT: _Edge](HashMap[EdgeKT, EdgeT], ABC):
     _graph: Graph
 
+    _Proxy = _MappingProxy()
+
     def __init__(self, graph: Graph) -> None:
         super().__init__()
         self._graph: Graph = graph
 
     @abstractmethod
-    def add(self, head: NodeKT, tail: NodeKT, **data) -> None: ...
+    def add(self, head: NodeKT, tail: NodeKT, **data) -> None:
+        ...
 
     @abstractmethod
-    def remove(self, head: NodeKT, tail: NodeKT) -> None: ...
+    def remove(self, head: NodeKT, tail: NodeKT) -> None:
+        ...
 
     @abstractmethod
-    def discard(self, head: NodeKT, tail: NodeKT) -> None: ...
+    def discard(self, head: NodeKT, tail: NodeKT) -> None:
+        ...
 
 
 # noinspection PyProtectedMember
@@ -204,6 +258,8 @@ class _Edges[NodeKT: Hashable, DataKT: Hashable, DataVT](
     """Internal container class for edges in simple graphs."""
 
     type KeyT = _Edge[NodeKT, DataKT, DataVT] | tuple[NodeKT, NodeKT] | frozenset[NodeKT]
+
+    _Proxy = _MappingProxy()
 
     def __getitem__(self, edge: KeyT) -> _Edge[NodeKT, DataKT, DataVT]:
         if isinstance(edge, _Edge):
@@ -252,6 +308,8 @@ class _DiEdges[NodeKT: Hashable, DataKT: Hashable, DataVT](
 
     type KeyT = _DiEdge[NodeKT, DataKT, DataVT] | tuple[NodeKT, NodeKT]
 
+    _Proxy = _MappingProxy()
+
     def __getitem__(self, edge: KeyT) -> _Edge[NodeKT, DataKT, DataVT]:
         if isinstance(edge, _DiEdge):
             return super().__getitem__(edge._nodes)
@@ -296,6 +354,7 @@ class _MultiEdgesABC[NodeKT: Hashable, EdgeKT: Hashable, MultiKT: Hashable, Edge
     _EdgesABC[NodeKT, EdgeKT | tuple[NodeKT, NodeKT, MultiKT], EdgeT],
     ABC
 ):
+    _Proxy = _MappingProxy()
 
     @abstractmethod
     def add(self, head: NodeKT, tail: NodeKT, key: MultiKT = None, **data) -> None: ...
@@ -314,6 +373,8 @@ class _MultiEdges[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT](
     """Internal container class for edges in multigraphs."""
 
     type KeyT = _Edge[NodeKT, DataKT, DataVT] | tuple[NodeKT, NodeKT] | frozenset[NodeKT]
+
+    _Proxy = _MappingProxy()
 
     def __getitem__(self, edge: KeyT) -> HashMap[EdgeKT, _MultiEdge[NodeKT, EdgeKT, DataKT, DataVT]]:
         if isinstance(edge, _Edge):
@@ -371,6 +432,8 @@ class _MultiDiEdges[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT
     """Internal container class for edges in directed multigraphs."""
 
     type KeyT = _DiEdge[NodeKT, DataKT, DataVT] | tuple[NodeKT, NodeKT]
+
+    _Proxy = _MappingProxy()
 
     def __getitem__(self, edge: KeyT) -> HashMap[EdgeKT, _MultiDiEdge[NodeKT, EdgeKT, DataKT, DataVT]]:
         if isinstance(edge, _DiEdge):
