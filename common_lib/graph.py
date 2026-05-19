@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 
 from weakref import WeakSet
 
+import networkx as nx
+
 from common_lib.hash_table import HashMap
 from common_lib.graph_abc import *
 
@@ -577,6 +579,9 @@ class Graph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT, EdgeDataKT: Hash
         """Return the data dictionary associated with the edge from head to tail."""
 
 
+Graph.register(nx.Graph)
+
+
 class DiGraph[NodeKT: Hashable = Hashable, NodeDataKT: Hashable = Hashable, NodeDataVT = Any,
               EdgeDataKT: Hashable = Hashable, EdgeDataVT = Any](
     Graph[NodeKT, NodeDataKT, NodeDataVT, EdgeDataKT, EdgeDataVT],
@@ -651,6 +656,9 @@ class DiGraph[NodeKT: Hashable = Hashable, NodeDataKT: Hashable = Hashable, Node
             return self
 
 
+DiGraph.register(nx.DiGraph)
+
+
 class MultiGraph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT,
                  EdgeKT: Hashable, EdgeDataKT: Hashable, EdgeDataVT](
     Graph[NodeKT, NodeDataKT, NodeDataVT, EdgeDataKT, EdgeDataVT],
@@ -659,9 +667,15 @@ class MultiGraph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT,
     """An undirected multigraph."""
 
 
+MultiGraph.register(nx.MultiGraph)
+
+
 class MultiDiGraph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT,
                    EdgeKT: Hashable, EdgeDataKT: Hashable, EdgeDataVT](
     Graph[NodeKT, NodeDataKT, NodeDataVT, EdgeDataKT, EdgeDataVT],
     _BaseGraph[NodeKT, _Node[NodeKT, NodeDataKT, NodeDataVT], _MultiDiEdge[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]]
 ):
     """A directed multigraph."""
+
+
+MultiDiGraph.register(nx.MultiDiGraph)
