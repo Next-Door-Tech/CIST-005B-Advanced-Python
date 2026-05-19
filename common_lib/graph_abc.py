@@ -203,40 +203,41 @@ class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
             return NotImplemented
         return self.edges > other.edges and self.nodes > other.nodes
 
-    @abstractmethod
-    def __and__(self, other: Self) -> Self:
-        """Return the intersection of the two Graphs."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __iand__(self, other: Self) -> Self:
-        """Update `self` to the intersection of `self` and `other` in-place."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __or__(self, other: Self) -> Self:
-        """Return the union of the two Graphs."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __ior__(self, other: Self) -> Self:
-        """Update `self` to the union of `self` and `other` in-place."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __sub__(self, other: Self) -> Self:
-        """Return the difference of the two graphs."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __rsub__(self, other: Self) -> Self:
-        """Return the difference of the two graphs."""
-        raise NotImplementedError
-
-    @abstractmethod
-    def __isub__(self, other: Self) -> Self:
-        """Update `self` to the difference of `self` and `other` in-place."""
-        raise NotImplementedError
+    # TODO in implementation
+    # @abstractmethod
+    # def __and__(self, other: Self) -> Self:
+    #     """Return the intersection of the two Graphs."""
+    #     raise NotImplementedError
+    #
+    # @abstractmethod
+    # def __iand__(self, other: Self) -> Self:
+    #     """Update `self` to the intersection of `self` and `other` in-place."""
+    #     raise NotImplementedError
+    #
+    # @abstractmethod
+    # def __or__(self, other: Self) -> Self:
+    #     """Return the union of the two Graphs."""
+    #     raise NotImplementedError
+    #
+    # @abstractmethod
+    # def __ior__(self, other: Self) -> Self:
+    #     """Update `self` to the union of `self` and `other` in-place."""
+    #     raise NotImplementedError
+    #
+    # @abstractmethod
+    # def __sub__(self, other: Self) -> Self:
+    #     """Return the difference of the two graphs."""
+    #     raise NotImplementedError
+    #
+    # @abstractmethod
+    # def __rsub__(self, other: Self) -> Self:
+    #     """Return the difference of the two graphs."""
+    #     raise NotImplementedError
+    #
+    # @abstractmethod
+    # def __isub__(self, other: Self) -> Self:
+    #     """Update `self` to the difference of `self` and `other` in-place."""
+    #     raise NotImplementedError
 
     def __copy__(self) -> Self:
         return type(self)(self.nodes, self.edges)
