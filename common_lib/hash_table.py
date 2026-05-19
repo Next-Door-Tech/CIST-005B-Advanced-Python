@@ -385,6 +385,10 @@ class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
         """Returns the Node with the specified index"""
         return self._table[index % self._maxlen]
 
+    def clear(self) -> None:
+        self._table = []
+        self._history = LinkedList()
+
     def __getitem__(self, key: KT, /) -> VT:
         n = self._get_node(self._find_node(key))
 
