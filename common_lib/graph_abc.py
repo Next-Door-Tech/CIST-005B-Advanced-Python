@@ -1,57 +1,11 @@
 from collections.abc import Iterable, Hashable, Collection
-from typing import Protocol, runtime_checkable, Self, overload
+from typing import Protocol, Self, overload
+from numbers import Real
 from abc import ABC, abstractmethod
+
 import networkx as nx
 
-__all__ = ("Weight", "Edge", "WeightedEdge", "GraphABC", "DiGraphABC")
-
-
-@runtime_checkable
-class Weight(Protocol):
-    """Must support comparison, addition, and negation/subtraction with other Weight types."""
-
-    @abstractmethod
-    def __eq__(self, other: Weight | object) -> bool:
-        """self == other"""
-
-    def __ne__(self, other: Weight | object) -> bool:
-        """self != other"""
-
-    @abstractmethod
-    def __lt__(self, other: Weight) -> bool:
-        """self < other"""
-
-    @abstractmethod
-    def __le__(self, other: Weight) -> bool:
-        """self <= other"""
-
-    @abstractmethod
-    def __gt__(self, other: Weight) -> bool:
-        """self > other"""
-
-    @abstractmethod
-    def __ge__(self, other: Weight) -> bool:
-        """self >= other"""
-
-    @abstractmethod
-    def __add__(self, other: Weight) -> Weight:
-        """self + other"""
-
-    @abstractmethod
-    def __radd__(self, other: Weight) -> Weight:
-        """other + self"""
-
-    @abstractmethod
-    def __neg__(self) -> Weight:
-        """-self"""
-
-    @abstractmethod
-    def __sub__(self, other: Weight) -> Weight:
-        """self - other"""
-
-    @abstractmethod
-    def __rsub__(self, other) -> Weight:
-        """other - self"""
+__all__ = ("Edge", "WeightedEdge", "GraphABC", "DiGraphABC")
 
 
 class Edge[NodeT: Hashable](Protocol):
@@ -85,7 +39,7 @@ class WeightedEdge[NodeT: Hashable](Edge[NodeT], Protocol):
 
     @property
     @abstractmethod
-    def weight(self) -> Weight:
+    def weight(self) -> Real:
         """Return the weight of this edge."""
         raise NotImplementedError
 
