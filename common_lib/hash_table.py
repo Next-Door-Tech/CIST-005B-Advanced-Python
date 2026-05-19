@@ -272,7 +272,7 @@ class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
         def __init__(self, /, *, floated: int = 0) -> None:
             ...
 
-        def __init__(self, key: KT = _MISSING, value: VT = _MISSING, *, floated: int = 0) -> None:
+        def __init__(self, key: KU = _MISSING, value: VU = _MISSING, *, floated: int = 0) -> None:
             self.floated = floated
             if key is _MISSING and value is _MISSING:
                 self._key = None
@@ -286,20 +286,20 @@ class HashMap[KT: Hashable, VT](HashTable[KT], MutableMapping[KT, VT]):
                 raise TypeError("expected 0 or 2 positional arguments")
 
         @property
-        def key(self) -> KT:
+        def key(self) -> KU:
             return self._key
 
         @property
-        def value(self) -> VT:
+        def value(self) -> VU:
             return self._value
 
         @value.setter
-        def value(self, value: VT) -> None:
+        def value(self, value: VU) -> None:
             self._value = value
             self._occupied = True
 
         # noinspection PyMethodOverriding
-        def set(self, key: KT, value: VT) -> None:
+        def set(self, key: KU, value: VU) -> None:
             self._key = key
             self._value = value
             self._occupied = True
