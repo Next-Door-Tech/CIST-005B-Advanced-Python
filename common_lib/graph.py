@@ -482,48 +482,11 @@ class _MultiDiEdges[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT
             pass
 
 
-class _BaseGraph[NodeKT: Hashable, NodeT: _Node, EdgeT: _Edge](GraphABC[NodeT, EdgeT], ABC):
+class _BaseGraph[NodeKT: Hashable, EdgeT: _Edge, EdgesT: _EdgesABC](GraphABC[_Node, EdgeT], ABC):
     """Base Methods for Graphs."""
 
-    _nodes: _Nodes[NodeKT, NodeT]
-    _edges: _EdgesABC
-
-    #
-    # _neighbors: dict[NodeKT, set[EdgeT]]  # maps nodes to their neighbors
-
-    # def __init__(self, nodes: Mapping[NodeKT, NodeT] | None = None, edges: Iterable[Iterable[NodeKT]] | None = None) -> None:
-    #     if nodes is not None:
-    #         self._nodes = set(nodes)  # fixme
-    #         self._endpoints = {v: set() for v in nodes}
-    #     else:
-    #         self._nodes = set()
-    #
-    #     self._edges = set()
-    #     if edges is not None:
-    #         for i, e in enumerate(edges):
-    #             try:
-    #                 self.add_edge(*e)
-    #             except (KeyError, TypeError, ValueError) as exc:
-    #                 raise ValueError(f"Failed to add edges[{i}] == {e!r}") from exc
-    #
-    # @property
-    # def nodes(self) -> frozenset[NodeKT]:
-    #     return frozenset(self._nodes)
-    #
-    # @property
-    # def edges(self) -> frozenset[EdgeT]:
-    #     return frozenset(self._edges)
-    #
-    # def add_node(self, node: NodeKT) -> None:
-    #     self._nodes.add(node)
-    #
-    # def remove_node(self, node: NodeKT) -> None:
-    #     self._nodes.remove(node)
-    #     self._neighbors.pop(node)
-    #
-    # def discard_node(self, node: NodeKT) -> None:
-    #     self._nodes.discard(node)
-    #     self._neighbors.pop(node)
+    _edges: EdgesT
+    _nodes: _Nodes
 
     def clear(self) -> None:
         self._edges.clear()
@@ -532,40 +495,14 @@ class _BaseGraph[NodeKT: Hashable, NodeT: _Node, EdgeT: _Edge](GraphABC[NodeT, E
     def clear_edges(self) -> None:
         self._edges.clear()
 
-    # def __and__(self, other: Self) -> Self:
-    #     if not isinstance(other, type(self)):
-    #         return NotImplemented
-    #     else:
-    #         return type(self)(self.nodes & other.nodes, self.edges & other.edges)
-    #
-    # def __iand__(self, other: Self) -> Self:
-    #     if not isinstance(other, type(self)):
-    #         return NotImplemented
-    #     else:
-    #         self._nodes &= other.nodes
-    #         self._edges &= other.edges
-    #         return self
-    #
-    # def __or__(self, other: Self) -> Self:
-    #     if not isinstance(other, type(self)):
-    #         return NotImplemented
-    #     else:
-    #         return type(self)(self._nodes | other._nodes, self._edges | other._edges)
-    #
-    # def __ior__(self, other: Self) -> Self:
-    #     if not isinstance(other, type(self)):
-    #         return NotImplemented
-    #     else:
-    #         self._nodes |= other.nodes
-    #         self._edges |= other.edges
-    #         return self
-    #
-    # def __copy__(self) -> Self:
-    #     return type(self)(self._nodes, self._edges)
-    #
-    # def __iter__(self) -> Generator[NodeKT]:
-    #     yield from self._nodes
+    def has_node(self, node: NodeKT) -> bool:
+        return node in self._nodes
 
+    def __len__(self) -> int:
+        return len(self._nodes)
+
+    def __copy__(self) -> Self:
+        return type(self)(self._nodes, self._edges)
 
 class Graph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT, EdgeDataKT: Hashable, EdgeDataVT](
     _BaseGraph[NodeKT, _Node[NodeKT, NodeDataKT, NodeDataVT], _Edge[NodeKT, EdgeDataKT, EdgeDataVT]]
