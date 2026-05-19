@@ -238,9 +238,8 @@ class GraphABC[NodeT: Hashable, EdgeT: Edge](Collection[NodeT], ABC):
         """Update `self` to the difference of `self` and `other` in-place."""
         raise NotImplementedError
 
-    @abstractmethod
     def __copy__(self) -> Self:
-        raise NotImplementedError
+        return type(self)(self.nodes, self.edges)
 
 
 GraphABC.register(nx.Graph)
