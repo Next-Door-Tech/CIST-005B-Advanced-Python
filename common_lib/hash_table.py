@@ -1,7 +1,7 @@
 from typing import overload
 from collections.abc import Hashable, Iterable, MutableSet, Mapping, MutableMapping, Generator
 from math import log2, ceil
-from common_lib.containers import LinkedList
+from .containers import LinkedList
 
 
 # noinspection PyPep8Naming

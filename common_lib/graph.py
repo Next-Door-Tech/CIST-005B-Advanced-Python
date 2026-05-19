@@ -4,8 +4,8 @@ from abc import ABC
 
 from dataclasses import dataclass, field
 
-from common_lib.hash_table import HashSet, HashMap
-from common_lib.graph_abc import *
+from .hash_table import HashSet, HashMap
+from .graph_abc import *
 
 __all__ = [
     "Graph",
