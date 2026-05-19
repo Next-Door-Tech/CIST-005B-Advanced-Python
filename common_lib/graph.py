@@ -4,7 +4,7 @@ from abc import ABC
 from common_lib.graph_abc import *
 
 __all__ = [
-    "SimpleGraph",
+    "Graph",
     "DiGraph",
     "MultiGraph",
     "MultiDiGraph"
@@ -87,12 +87,13 @@ class BaseGraph[VertT: Hashable, EdgeT: Edge](GraphABC[VertT, EdgeT], ABC):
         return type(self)(self._vertices, self._edges)
 
 
-class SimpleGraph[VertT: Hashable](BaseGraph[VertT, frozenset[VertT]]):
-    """A simple graph (undirected, unweighted, no duplicate edges)."""
 
-    type EdgeT = frozenset[VertT]
+class Graph[NodeT: Hashable](_BaseGraph[NodeT, frozenset[NodeT]]):
+    """An undirected graph with no duplicate edges."""
 
-    def add_edge(self, a: VertT, b: VertT) -> None:
+    type EdgeT = frozenset[NodeT]
+
+    def add_edge(self, a: NodeT, b: NodeT) -> None:
         edge = frozenset((a, b))
         if not edge <= self._vertices:
             s = "Provided vertices are not present in this Graph:"
