@@ -28,7 +28,7 @@ class Edge[NodeT: Hashable](Protocol):
     @abstractmethod
     def __eq__(self, other: Self | object) -> bool:
         """Return True if the edges are equal, i.e. both edges have
-        the same endpoints and any additional values are equal."""
+        the same endpoints and direction."""
         raise NotImplementedError
 
 
