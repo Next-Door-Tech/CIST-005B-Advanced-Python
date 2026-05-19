@@ -350,9 +350,7 @@ class _DiEdges[NodeKT: Hashable, DataKT: Hashable, DataVT](
 
 
 class _MultiEdgesABC[NodeKT: Hashable, EdgeKT: Hashable, MultiKT: Hashable, EdgeT: _MultiEdge](
-    HashMap[EdgeKT | tuple[NodeKT, NodeKT, MultiKT], EdgeT],
-    _EdgesABC[NodeKT, EdgeKT | tuple[NodeKT, NodeKT, MultiKT], EdgeT],
-    ABC
+    _EdgesABC[NodeKT, EdgeKT | tuple[NodeKT, NodeKT, MultiKT], EdgeT], ABC
 ):
     _Proxy = _MappingProxy()
 
