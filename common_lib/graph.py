@@ -21,13 +21,13 @@ class _Node[NodeKT: Hashable, DataKT: Hashable, DataVT](MutableMapping[DataKT, D
     _graph: Graph
     _key: NodeKT
     _data: HashMap[DataKT, DataVT]
-    _edges: HashSet[_Edge]
+    _edges: WeakSet[_Edge]
 
     def __init__(self, graph: Graph, key: NodeKT, /, **data) -> None:
         self._graph = graph
         self._key = key
         self._data = HashMap(**data)
-        self._edges = HashSet[_Edge]()
+        self._edges = WeakSet()
 
     def __getitem__(self, key: DataKT, /) -> DataVT:
         return self._data[key]
