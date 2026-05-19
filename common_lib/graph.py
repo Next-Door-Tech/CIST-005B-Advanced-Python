@@ -113,6 +113,8 @@ class _Node[NodeKT: Hashable, DataKT: Hashable, DataVT](MutableMapping[DataKT, D
 class _Nodes[NodeKT: Hashable, DataKT: Hashable, DataVT](HashMap[NodeKT, _Node[NodeKT, DataKT, DataVT]]):
     """Internal container class for nodes."""
 
+    _Proxy = _MappingProxy()
+
     def __init__(self, graph: Graph) -> None:
         super().__init__()
         self._graph: Graph = graph
