@@ -16,16 +16,18 @@ __all__ = [
 
 
 class _Node[NodeKT: Hashable, DataKT: Hashable, DataVT](MutableMapping[DataKT, DataVT]):
-    __slots__ = '_graph', '_key', '_data', '__weakref__'
+    __slots__ = '_graph', '_key', '_data', '_edges', '__weakref__'
 
     _graph: Graph
     _key: NodeKT
     _data: HashMap[DataKT, DataVT]
+    _edges: HashSet[_Edge]
 
-    def __init__(self, graph: Graph, key: NodeKT, **data) -> None:
+    def __init__(self, graph: Graph, key: NodeKT, /, **data) -> None:
         self._graph = graph
         self._key = key
         self._data = HashMap(**data)
+        self._edges = HashSet[_Edge]()
 
     def __getitem__(self, key: DataKT, /) -> DataVT:
         return self._data[key]
@@ -52,17 +54,14 @@ class _Node[NodeKT: Hashable, DataKT: Hashable, DataVT](MutableMapping[DataKT, D
             return self._key is other._key or self._key == other._key
 
 
-class _Nodes[NodeKT: Hashable, DataKT: Hashable, DataVT](HashMap[NodeKT, _Node[NodeKT, DataKT, DataVT]]):
-    ...  # FIXME
-
-
 class _Edge[NodeKT: Hashable, DataKT: Hashable, DataVT](Edge[NodeKT], MutableMapping[DataKT, DataVT]):
     __slots__ = '_graph', '_nodes', '_data', '__weakref__'
 
     _graph: Graph
     _nodes: frozenset[NodeKT]
+    _data: HashMap[DataKT, DataVT]
 
-    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, key: Hashable = None, **data) -> None:
+    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, _=None, /, **data) -> None:
         self._graph = graph
         self._nodes = frozenset({head, tail})
         self._data = HashMap(**data)
@@ -94,14 +93,12 @@ class _Edge[NodeKT: Hashable, DataKT: Hashable, DataVT](Edge[NodeKT], MutableMap
     def __contains__(self, node: NodeKT) -> bool:
         return node in self._nodes
 
-    ...  # FIXME
-
 
 class _DiEdge[NodeKT: Hashable, DataKT: Hashable, DataVT](_Edge[NodeKT, DataKT, DataVT]):
     __slots__ = ()
 
-    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, key: Hashable = None, **data) -> None:
-        super().__init__(graph, head, tail, key, **data)
+    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, _=None, /, **data) -> None:
+        super().__init__(graph, head, tail, **data)
         self._nodes = (head, tail)
 
     @property
@@ -112,15 +109,13 @@ class _DiEdge[NodeKT: Hashable, DataKT: Hashable, DataVT](_Edge[NodeKT, DataKT, 
     def tail(self) -> NodeKT:
         return self._nodes[1]
 
-    ...  # FIXME
-
 
 class _MultiEdge[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT](_Edge[NodeKT, DataKT, DataVT]):
     __slots__ = '_key',
 
     _key: EdgeKT
 
-    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, key: EdgeKT = None, **data) -> None:
+    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, key: EdgeKT, /, **data) -> None:
         super().__init__(graph, head, tail, key, **data)
         self._key = key
 
@@ -133,24 +128,18 @@ class _MultiEdge[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT](_
         else:
             return (self._nodes, self._key) == (other._nodes, other._key)
 
-    ...  # FIXME
-
 
 class _MultiDiEdge[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT] \
             (_DiEdge[NodeKT, DataKT, DataVT], _MultiEdge[NodeKT, EdgeKT, DataKT, DataVT]):
     __slots__ = ()
-    ...  # FIXME
+
+    def __init__(self, graph: Graph, head: NodeKT, tail: NodeKT, key: EdgeKT, /, **data) -> None:
+        super().__init__(graph, head, tail, key, **data)
+        self._key = key
 
 
-class _EdgeMap[NodeT: Hashable, NodeKT: Hashable, NodeVT](HashMap[NodeT, HashMap[NodeKT, NodeVT]]):
-    class Node[KU, VU](HashMap.Node[KU, VU]):
-        __slots__ = "__weakref__"
-
-
-class _BaseGraph[NodeKT: Hashable,
-                 NodeDataKT: Hashable = Hashable, NodeDataVT = Any,
-                 EdgeT: Edge = Edge[NodeKT],
-                 EdgeDataKT: Hashable = Hashable, EdgeDataVT = Any] \
+class _BaseGraph[NodeKT: Hashable, NodeDataKT: Hashable = Hashable, NodeDataVT = Any,
+                 EdgeT: Edge = Edge[NodeKT], EdgeDataKT: Hashable = Hashable, EdgeDataVT = Any] \
             (GraphABC[_Node[NodeKT, NodeDataKT, NodeDataVT], _Edge[EdgeT, EdgeDataKT, EdgeDataVT]], ABC):
     """Base Methods for Graphs."""
 
