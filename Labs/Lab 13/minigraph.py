@@ -1,11 +1,15 @@
 from collections.abc import Iterable, Mapping
 from typing import Hashable
 
+import random
+
 from common_lib.hash_table import HashMap, HashSet
 from common_lib.containers import LinkedStack, LinkedQueue
 
 
 class GraphAdjMatrix[T: Hashable]:
+    """More efficient for dense graphs."""
+
     def __init__(self, iterable: Iterable[T] | None = None) -> None:
         self.vertices: HashMap[T, int] = HashMap()
         self.edges: list[list[bool]] = []
@@ -34,6 +38,8 @@ class GraphAdjMatrix[T: Hashable]:
 
 
 class GraphAdjSet[T: Hashable]:
+    """More efficient for sparse graphs."""
+
     def __init__(self, vertices: Iterable[T] | None = None, edges: Iterable[tuple[T, T]] | None = None) -> None:
         self.vertices: HashSet[T] = HashSet(vertices)
         self.edges: HashSet[tuple[T, T]] = HashSet(edges)
@@ -93,3 +99,14 @@ class WeightedGraphAdjHashMap[T: Hashable](GraphAdjSet[T]):
         if source not in self.vertices or destination not in self.vertices:
             raise KeyError
         self.edges.add((source, destination))
+
+
+nodes = [chr(ord('A') + i) for i in range(10)]
+edges = {tuple(random.sample(nodes, k=2)) for _ in range(15)}
+
+G = GraphAdjSet[str](nodes, edges)
+
+G.add_edge('A', 'B')
+
+print(f"DFT: {G.depth_first_traversal('A')}")
+print(f"BFT: {G.breadth_first_traversal('A')}")
