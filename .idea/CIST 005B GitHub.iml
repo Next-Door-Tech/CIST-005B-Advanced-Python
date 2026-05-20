@@ -6,6 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/Midterm Project/common_lib" />
       <excludeFolder url="file://$MODULE_DIR$/Final Project/cache" />
       <excludeFolder url="file://$MODULE_DIR$/cache" />
+      <excludeFolder url="file://$MODULE_DIR$/Final Project/common_lib" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.14 (CIST 005B GitHub)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

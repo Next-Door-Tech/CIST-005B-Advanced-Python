@@ -1,0 +1,7 @@
+frozendict>=2.4.7
+networkx>=3.6.1
+numpy>=2.4.4
+pandas>=1.5
+matplotlib>=3.10.9
+scipy>=1.17.1
+osmnx>=2.1.0
