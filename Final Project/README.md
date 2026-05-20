@@ -2,7 +2,8 @@
 
 1. Ensure all packages from `requirements.txt` are installed via pip: `pip install -r requirements.txt`
 2. Run `a_star.py`
-3. The path between two random points will be chosen and displayed on the MatPlotLib plot. The log will show
+3. The path between two random points will be chosen and displayed on the MatPlotLib plot. The log will show the node
+   IDs along the path, and the order of nodes inspected and number of nodes inspected will also be printed.
 
 ## Interactive Report
 
@@ -16,3 +17,7 @@ structure itself contains a LinkedList to keep track of insertion order.
 And there's probably another half dozen custom data structures being used somewhere in the final code. I've basically
 been writing all of my data structures on top of the ones I've implemented earlier, so it's real difficult to keep track
 of.
+
+## GitHub
+
+All my code for this semester is up on my GitHub here: https://github.com/Next-Door-Tech/CIST-005B-Advanced-Python

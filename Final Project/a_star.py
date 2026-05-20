@@ -1,7 +1,6 @@
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from dataclasses import dataclass, field
-from functools import lru_cache
-from typing import Hashable
+from typing import Hashable, Literal, overload
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -10,21 +9,27 @@ import osmnx as ox
 import heapq
 import random
 
-from common_lib.containers import LinkedQueue
-from common_lib.graph import DiGraph
-from common_lib.hash_table import HashMap
+from common_lib.graph import *
+from common_lib.hash_table import HashMap, HashSet
+from common_lib.containers import LinkedStack
 
 place = "West Valley College, Saratoga, California, USA"
 
-G = ox.graph_from_place(place, network_type="all")
-ox.plot_graph(G)
-plt.show()
+nxG = ox.graph_from_place(place, network_type="all")
+
+
+# ox.plot_graph(nxG)
+# plt.show()
+
+
+# G = MultiDiGraph(nxG.nodes, nxG.edges)
 
 
 def a_star[NodeT: Hashable](
-        graph: nx.DiGraph[NodeT], source: NodeT, target: NodeT,
+        graph: Graph[NodeT], source: NodeT, target: NodeT,
         weight: str | Callable[[NodeT, NodeT], float] = "weight",
-        heuristic: Callable[[NodeT, NodeT], float] = lambda s, e: 0
+        heuristic: Callable[[NodeT, NodeT], float] = lambda s, e: 0,
+        logging: bool = False
 ) -> list[NodeT]:
     parent: HashMap[NodeT, NodeT] = HashMap()
 
@@ -109,8 +114,14 @@ def a_star[NodeT: Hashable](
     queue: HeuristicQueue[NodeT] = HeuristicQueue()
     queue.push(source)
 
+    if logging:
+        node_log = []
+
     while queue:
         current = queue.pop()
+
+        if logging:
+            node_log.append(current)
 
         if current is target or current == target:
             path = [current]
@@ -119,6 +130,11 @@ def a_star[NodeT: Hashable](
                 path.append(current)
 
             path.reverse()
+
+            if logging:
+                print('\t\tSteps:', node_log)
+                print('\t\tCount:', len(node_log))
+
             return path
 
         cur_dist = distance(current)
@@ -136,11 +152,41 @@ def a_star[NodeT: Hashable](
         raise ValueError(f"No path from {source} to {target} exists.")
 
 
-random.seed(0)
-for _ in range(10):
-    targets = random.sample(list(G.nodes), 2)
-    print(targets[0], "->", targets[1])
-    print('\t', "Heuristic = 0")
-    print('\t', nx.astar_path(G, *targets, weight="length"))
-    print('\t', a_star(G, *targets, weight="length"))
-    print()
+def dfs[NodeT: Hashable](graph: Graph[NodeT],
+                         source: NodeT, target: NodeT = None,
+                         logging: bool = False) -> list[NodeT]:
+    visited = HashSet()
+    stack = LinkedStack()
+
+
+def bfs[NodeT: Hashable](graph: Graph[NodeT],
+                         source: NodeT, target: NodeT = None,
+                         logging: bool = False) -> list[NodeT]:
+    return a_star(graph, source, target, weight=lambda *_, **__: 1)
+
+
+def dijkstra[NodeT: Hashable](graph: Graph[NodeT],
+                              source: NodeT, target: NodeT = None,
+                              logging: bool = False) -> list[NodeT]:
+    return a_star(graph, source, target)
+
+
+def gps_distance[NodeT](graph: Graph, node1: NodeT, node2: NodeT) -> float:
+    latlong1 = graph.nodes[node1]['y'], graph.nodes[node1]['x']
+    latlong2 = graph.nodes[node2]['y'], graph.nodes[node2]['x']
+    return ox.distance.great_circle(*latlong1, *latlong2)
+
+
+targets = random.sample(list(nxG.nodes), 2)
+print()
+print(targets[0], "->", targets[1])
+print('\tNetworkX:', nx.astar_path(nxG, *targets, weight="length"))
+print()
+print("\tAlgorithm: Dijkstra using current path length only")
+print('\tMy Graph:', a_star(nxG, *targets, weight="length", logging=True))  # A* with h = 0 is simply Dijkstra.
+print()
+print('\tAlgorithm: A* using GPS Distance and current path length')
+print('\tMy Graph:',
+      a_star(nxG, *targets, weight="length", heuristic=lambda a, b: gps_distance(nxG, a, b), logging=True))
+
+ox.plot_graph_route(nxG, a_star(nxG, *targets, weight="length", heuristic=lambda a, b: gps_distance(nxG, a, b)))

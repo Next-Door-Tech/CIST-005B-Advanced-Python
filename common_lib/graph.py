@@ -236,7 +236,7 @@ class _MultiDiEdge[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT]
 class _EdgesABC[NodeKT: Hashable, EdgeKT: Hashable, EdgeT: _Edge](HashMap[EdgeKT, EdgeT], ABC):
     _graph: Graph
 
-    _Proxy = _MappingProxy()
+    _Proxy = _MappingProxy[EdgeKT, EdgeT]()
 
     def __init__(self, graph: Graph) -> None:
         super().__init__()
@@ -361,9 +361,11 @@ class _MultiEdgesABC[NodeKT: Hashable, EdgeKT: Hashable, MultiKT: Hashable, Edge
     @abstractmethod
     def add(self, head: NodeKT, tail: NodeKT, key: MultiKT = None, **data) -> None: ...
 
+    # noinspection PyMethodOverriding
     @abstractmethod
     def remove(self, head: NodeKT, tail: NodeKT, key: MultiKT) -> None: ...
 
+    # noinspection PyMethodOverriding
     @abstractmethod
     def discard(self, head: NodeKT, tail: NodeKT, key: MultiKT) -> None: ...
 
@@ -417,12 +419,12 @@ class _MultiEdges[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT](
             self._graph._nodes[head]._edges.add(self[edge][key])
             self._graph._nodes[tail]._edges.add(self[edge][key])
 
-    def remove(self, head: NodeKT, tail: NodeKT) -> None:
-        del self[head, tail]
+    def remove(self, head: NodeKT, tail: NodeKT, key: EdgeKT) -> None:
+        del self[head, tail][key]
 
-    def discard(self, head: NodeKT, tail: NodeKT) -> None:
+    def discard(self, head: NodeKT, tail: NodeKT, key: EdgeKT) -> None:
         try:
-            self.remove(head, tail)
+            self.remove(head, tail, key)
         except KeyError:
             pass
 
@@ -486,11 +488,12 @@ class _MultiDiEdges[NodeKT: Hashable, EdgeKT: Hashable, DataKT: Hashable, DataVT
             pass
 
 
+# noinspection PyProtectedMember
 class _BaseGraph[NodeKT: Hashable, EdgeT: _Edge, EdgesT: _EdgesABC](GraphABC[_Node, EdgeT], ABC):
     """Base Methods for Graphs."""
 
-    _edges: EdgesT
     _nodes: _Nodes
+    _edges: EdgesT
 
     def clear(self) -> None:
         self._edges.clear()
@@ -502,42 +505,31 @@ class _BaseGraph[NodeKT: Hashable, EdgeT: _Edge, EdgesT: _EdgesABC](GraphABC[_No
     def has_node(self, node: NodeKT) -> bool:
         return node in self._nodes
 
+    @property
+    def nodes(self) -> Mapping[NodeKT, MutableMapping]:
+        return self._nodes._Proxy
+
+    @property
+    def edges(self) -> Mapping[Edge[NodeKT], MutableMapping]:
+        return self._edges._Proxy
+
     def __len__(self) -> int:
         return len(self._nodes)
 
     def __copy__(self) -> Self:
         return type(self)(self._nodes, self._edges)
 
-class Graph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT, EdgeDataKT: Hashable, EdgeDataVT](
-    _BaseGraph[NodeKT, _Node[NodeKT, NodeDataKT, NodeDataVT], _Edge[NodeKT, EdgeDataKT, EdgeDataVT]]
+
+class Graph[NodeKT: Hashable,
+            NodeDataKT: Hashable = str, NodeDataVT = Any,
+            EdgeDataKT: Hashable = str, EdgeDataVT = Any](
+    _BaseGraph[
+        NodeKT,
+        _Edge[NodeKT, EdgeDataKT, EdgeDataVT],
+        _Edges[NodeKT, EdgeDataKT, EdgeDataVT]
+    ]
 ):
     """An undirected graph with no duplicate edges."""
-
-    def add_node(self, node: NodeKT) -> None:
-        self._nodes.add(node)
-
-    def add_edge(self, a: NodeKT, b: NodeKT) -> None:
-        edge = frozenset((a, b))
-        if not edge <= self._nodes:
-            s = "Provided nodes are not present in this Graph:"
-            if a not in self._nodes:
-                s += f" a: {a!r}"
-            if b not in self._nodes:
-                s += f" b: {b!r}"
-            raise KeyError(s)
-        if len(edge) < 2:
-            raise ValueError(
-                f"{type(self).__name__} endpoints must be distinct, got hash({a!r}) == hash({b!r}).")
-        self._edges.add(edge)
-
-    def remove_edge(self, a: NodeT, b: NodeT) -> None:
-        try:
-            self._edges.remove(frozenset((a, b)))
-        except KeyError:
-            raise KeyError(f"No edge between {a!r} and {b!r}") from None
-
-    def discard_edge(self, a: NodeT, b: NodeT) -> None:
-        self._edges.discard(frozenset((a, b)))
 
     def is_multigraph(self) -> bool:
         return False
@@ -545,40 +537,82 @@ class Graph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT, EdgeDataKT: Hash
     def is_directed(self) -> bool:
         return False
 
-    def neighbors(self, node: NodeT) -> set[NodeT]:
+    _nodes: _Nodes[NodeKT, NodeDataKT, NodeDataVT]
+    _edges: _Edges[NodeKT, EdgeDataKT, EdgeDataVT]
+
+    def __new__(cls, *args, **kwargs) -> Self:
+        self = object.__new__(cls)
+        self._nodes = _Nodes(self)
+        self._edges = _Edges(self)
+        return self
+
+    type InitNodes = Iterable[NodeKT] | Mapping[NodeKT, Mapping[str, NodeDataVT]] | None
+    type InitEdges = Iterable[Iterable[NodeKT]] | Mapping[Iterable[NodeKT], Mapping[str, EdgeDataVT]] | None
+
+    def __init__(self, nodes: InitNodes = None, edges: InitEdges = None) -> None:
+
+        if nodes is None:
+            pass
+        elif hasattr(nodes, 'keys') and hasattr(nodes, '__getitem__'):
+            nodes: Mapping
+            for node in nodes.keys():
+                self.add_node(node, **nodes[node])
+        elif hasattr(nodes, '__iter__'):
+            nodes: Iterable
+            for node in nodes:
+                self.add_node(node)
+        else:
+            raise TypeError(f"{type(self).__name__}: nodes == '{type(nodes)}'")
+
+        if edges is None:
+            pass
+        elif hasattr(edges, 'keys') and hasattr(edges, '__getitem__'):
+            edges: Mapping
+            for edge in edges.keys():
+                self.add_edge(*edge, **edges[edge])
+        elif hasattr(edges, '__iter__'):
+            edges: Iterable
+            for edge in edges:
+                self.add_edge(*edge)
+        else:
+            raise TypeError(f"{type(self).__name__}: edges == '{type(edges)}'")
+
+    def add_node(self, node: NodeKT, /, **data) -> None:
+        self._nodes.add(node, **data)
+
+    def remove_node(self, node: NodeKT) -> None:  # TODO
+        pass
+
+    def discard_node(self, node: NodeKT) -> None:  # TODO
+        pass
+
+    def has_node(self, node: NodeKT) -> bool:  # TODO
+        pass
+
+    def has_edge(self, head: NodeKT, tail: NodeKT) -> bool:
+        return (head, tail) in self._edges
+
+    def add_edge(self, head: NodeKT, tail: NodeKT, /, **data) -> None:
+        self._edges.add(head, tail, **data)
+
+    def remove_edge(self, head: NodeKT, tail: NodeKT) -> None:
+        try:
+            self._edges.remove(head, tail)
+        except KeyError:
+            raise KeyError(f"No edge between {head!r} and {tail!r} exists.") from None
+
+    def discard_edge(self, head: NodeKT, tail: NodeKT) -> None:
+        self._edges.discard(head, tail)
+
+    def get_edge_data(self, head, tail) -> _Edge:
+        """Return the data dictionary associated with the edge from head to tail."""
+        return self._edges[head, tail]
+
+    def neighbors(self, node: NodeT) -> set[NodeT]:  # TODO
         return set.union(*(edge for edge in self._edges if node in edge)) - {node}
 
-    def __sub__(self, other: Self) -> Self:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        else:
-            vertices = self.nodes - other.nodes
-            edges = {e for e in self.edges - other.edges if e <= vertices}
-
-            return type(self)(vertices, edges)
-
-    def __rsub__(self, other: Self) -> Self:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        else:
-            vertices = other.nodes - self.nodes
-            edges = {e for e in other.edges - self.edges if e <= vertices}
-
-            return type(self)(vertices, edges)
-
-    def __isub__(self, other: Self) -> Self:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        else:
-            self._nodes -= other.nodes
-            self._edges -= other.edges
-            for e in self._edges:
-                if not e <= self._nodes:
-                    self._edges.remove(e)
-            return self
-
-    def get_edge_data(self, head, tail) -> dict:
-        """Return the data dictionary associated with the edge from head to tail."""
+    def __iter__(self):
+        pass
 
 
 Graph.register(nx.Graph)
@@ -587,37 +621,16 @@ Graph.register(nx.Graph)
 class DiGraph[NodeKT: Hashable = Hashable, NodeDataKT: Hashable = Hashable, NodeDataVT = Any,
               EdgeDataKT: Hashable = Hashable, EdgeDataVT = Any](
     Graph[NodeKT, NodeDataKT, NodeDataVT, EdgeDataKT, EdgeDataVT],
-    _BaseGraph[NodeKT, _Node[NodeKT, NodeDataKT, NodeDataVT], _DiEdge[NodeKT, EdgeDataKT, EdgeDataVT]]
+    _BaseGraph[
+        NodeKT,
+        _DiEdge[NodeKT, EdgeDataKT, EdgeDataVT],
+        _DiEdges[NodeKT, EdgeDataKT, EdgeDataVT]
+    ]
 ):
     """A simple directed graph (unweighted, no duplicate edges)."""
 
-    type EdgeT = tuple[NodeT, NodeT]
-
-    _nodes: set[NodeT]
-    _edges: set[EdgeT]
-
-    def add_edge(self, head: NodeT, tail: NodeT) -> None:
-        edge_set = frozenset((head, tail))
-        if not edge_set <= self._vertices:
-            s = "Provided nodes are not present in this Graph:"
-            if head not in self._vertices:
-                s += f" head: {head!r}"
-            if tail not in self._vertices:
-                s += f" tail: {tail!r}"
-            raise KeyError(s)
-        if len(edge_set) < 2:
-            raise ValueError(
-                f"{type(self).__name__}: head and tail must be distinct, got hash({head!r}) == hash({tail!r})")
-        self._edges.add((head, tail))
-
-    def remove_edge(self, head: NodeT, tail: NodeT) -> None:
-        try:
-            self._edges.remove((head, tail))
-        except KeyError:
-            raise KeyError(f"No edge between {head!r} and {tail!r}") from None
-
-    def discard_edge(self, head: NodeT, tail: NodeT) -> None:
-        self._edges.discard((head, tail))
+    _nodes: _Nodes[NodeKT, NodeDataKT, NodeDataVT]
+    _edges: _DiEdges[NodeKT, EdgeDataKT, EdgeDataVT]
 
     def is_multigraph(self) -> bool:
         return False
@@ -625,37 +638,11 @@ class DiGraph[NodeKT: Hashable = Hashable, NodeDataKT: Hashable = Hashable, Node
     def is_directed(self) -> bool:
         return True
 
-    def neighbors(self, node: NodeT) -> set[NodeT]:
-        return set(e[1] for e in self.edges if node is e[0] or node == e[0])
-
-    def __sub__(self, other: Self) -> Self:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        else:
-            vertices = self.nodes - other.nodes
-            edges = {e for e in self.edges - other.edges if all(v in vertices for v in e)}
-
-            return type(self)(vertices, edges)
-
-    def __rsub__(self, other: Self) -> Self:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        else:
-            vertices = other.nodes - self.nodes
-            edges = {e for e in other.edges - self.edges if all(v in vertices for v in e)}
-
-            return type(self)(vertices, edges)
-
-    def __isub__(self, other: Self) -> Self:
-        if not isinstance(other, type(self)):
-            return NotImplemented
-        else:
-            self._vertices -= other.nodes
-            self._edges -= other.edges
-            for e in self._edges:
-                if not all(v in self._vertices for v in e):
-                    self._edges.remove(e)
-            return self
+    def __new__(cls, *args, **kwargs) -> Self:
+        self = object.__new__(cls)
+        self._nodes = _Nodes(self)
+        self._edges = _DiEdges(self)
+        return self
 
 
 DiGraph.register(nx.DiGraph)
@@ -664,9 +651,28 @@ DiGraph.register(nx.DiGraph)
 class MultiGraph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT,
                  EdgeKT: Hashable, EdgeDataKT: Hashable, EdgeDataVT](
     Graph[NodeKT, NodeDataKT, NodeDataVT, EdgeDataKT, EdgeDataVT],
-    _BaseGraph[NodeKT, _Node[NodeKT, NodeDataKT, NodeDataVT], _MultiEdge[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]]
+    _BaseGraph[
+        NodeKT,
+        _MultiEdge[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT],
+        _MultiEdges[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]
+    ]
 ):
     """An undirected multigraph."""
+
+    _nodes: _Nodes[NodeKT, NodeDataKT, NodeDataVT]
+    _edges: _MultiEdges[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]
+
+    def is_multigraph(self) -> bool:
+        return True
+
+    def is_directed(self) -> bool:
+        return False
+
+    def __new__(cls, *args, **kwargs) -> Self:
+        self = object.__new__(cls)
+        self._nodes = _Nodes(self)
+        self._edges = _MultiEdges(self)
+        return self
 
 
 MultiGraph.register(nx.MultiGraph)
@@ -675,9 +681,28 @@ MultiGraph.register(nx.MultiGraph)
 class MultiDiGraph[NodeKT: Hashable, NodeDataKT: Hashable, NodeDataVT,
                    EdgeKT: Hashable, EdgeDataKT: Hashable, EdgeDataVT](
     Graph[NodeKT, NodeDataKT, NodeDataVT, EdgeDataKT, EdgeDataVT],
-    _BaseGraph[NodeKT, _Node[NodeKT, NodeDataKT, NodeDataVT], _MultiDiEdge[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]]
+    _BaseGraph[
+        NodeKT,
+        _MultiDiEdge[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT],
+        _MultiDiEdges[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]
+    ]
 ):
     """A directed multigraph."""
+
+    _nodes: _Nodes[NodeKT, NodeDataKT, NodeDataVT]
+    _edges: _MultiDiEdges[NodeKT, EdgeKT, EdgeDataKT, EdgeDataVT]
+
+    def is_multigraph(self) -> bool:
+        return True
+
+    def is_directed(self) -> bool:
+        return True
+
+    def __new__(cls, *args, **kwargs) -> Self:
+        self = object.__new__(cls)
+        self._nodes = _Nodes(self)
+        self._edges = _MultiDiEdges(self)
+        return self
 
 
 MultiDiGraph.register(nx.MultiDiGraph)
