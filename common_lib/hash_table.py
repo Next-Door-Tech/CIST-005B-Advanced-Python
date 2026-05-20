@@ -204,7 +204,7 @@ class HashSet[T: Hashable](HashTable[T], MutableSet[T]):
         if iterable is not None:
             temp = [*iterable]
             self._maxlen = len(temp)
-            for i in iterable:
+            for i in temp:
                 self.add(i)
 
     def add(self, value: T) -> None:
